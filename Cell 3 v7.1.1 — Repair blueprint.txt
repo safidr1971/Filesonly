@@ -1,0 +1,547 @@
+# Cell 3 v7.1.1 — Repair blueprint
+
+The goal for v7.1.1 should be to fix the build-planning and dependency-contract architecture, not to add another special-case workaround for CSS.
+
+The v7.1.0 failure is a useful example: the cycle detector correctly stopped an invalid dependency graph, but the planner supplied relationships that did not all represent genuine build-order dependencies. The builder needs to distinguish:
+
+1. Build dependencies — one file genuinely needs another file to exist or be processed first.
+2. Runtime references — files refer to or load one another when the application runs.
+3. Validation dependencies — tests or checks need another file to validate it, but that does not necessarily mean they must be generated first.
+4. Documentation references — documentation describes files without being a prerequisite for creating them.
+
+Those relationships must not be stored in one undifferentiated dependency list.
+
+## 1. The required v7.1.1 architecture
+
+Stage 1 — Specification intake
+
+Parse project requirements and identify deliverables
+
+Stage 2 — Planner and file manifest
+
+File ownership, file types, imports, runtime references, validation references
+
+Stage 3 — Semantic contract validation
+
+Validate dependency meaning, file ownership, paths, and cycles
+
+Stage 4 — Dependency ordering
+
+Generate only from a validated acyclic build graph
+
+Stage 5 — Bounded semantic generation
+
+Small units, per-unit contracts, checkpoints, targeted recovery
+
+Stages 6–9 — Assembly, audits, tests, and evidence
+
+Syntax, cross-file contracts, independent audit, browser acceptance
+
+Stage 10 — Publish gate
+
+Publish only after all required evidence gates pass
+
+The existing ten-stage user-facing build workflow should be retained where possible. This is an internal architecture repair, not a reason to redesign the whole interface.
+
+## 2. Replace the single dependency list with four separate relationship types
+
+This is the most important change.
+
+A manifest should no longer use one `dependencies` field to represent every relationship. It should have explicit fields with separate meanings.
+
+### Proposed manifest contract
+
+```
+{
+  "schema_version": 2,
+  "files": [
+    {
+      "path": "index.html",
+      "kind": "html",
+      "generation_dependencies": [],
+      "build_dependencies": [],
+      "runtime_references": [
+        {
+          "path": "styles.css",
+          "type": "stylesheet"
+        },
+        {
+          "path": "app.js",
+          "type": "script"
+        }
+      ],
+      "contract_references": [
+        {
+          "path": "styles.css",
+          "type": "selector_contract"
+        },
+        {
+          "path": "app.js",
+          "type": "dom_contract"
+        }
+      ],
+      "validation_targets": []
+    },
+    {
+      "path": "styles.css",
+      "kind": "css",
+      "generation_dependencies": [],
+      "build_dependencies": [],
+      "runtime_references": [],
+      "contract_references": [
+        {
+          "path": "index.html",
+          "type": "html_selector_contract"
+        }
+      ],
+      "validation_targets": []
+    },
+    {
+      "path": "app.js",
+      "kind": "javascript",
+      "generation_dependencies": [],
+      "build_dependencies": [],
+      "runtime_references": [],
+      "contract_references": [
+        {
+          "path": "index.html",
+          "type": "dom_element_contract"
+        }
+      ],
+      "validation_targets": []
+    },
+    {
+      "path": "tests/test_logic.js",
+      "kind": "javascript_test",
+      "generation_dependencies": [],
+      "build_dependencies": [],
+      "runtime_references": [],
+      "contract_references": [],
+      "validation_targets": [
+        "app.js"
+      ]
+    },
+    {
+      "path": "README.md",
+      "kind": "documentation",
+      "generation_dependencies": [],
+      "build_dependencies": [],
+      "runtime_references": [],
+      "contract_references": [],
+      "validation_targets": []
+    }
+  ]
+}
+```
+
+This is an illustrative contract, not a claim that these are the exact contents of your current manifest.
+
+Meaning of each field:
+
+| Relationship              | Purpose                                               | Can create a generation-order edge? |
+| ------------------------- | ----------------------------------------------------- | ----------------------------------- |
+| `generation_dependencies` | A real prerequisite needed to generate a file or unit | Yes                                 |
+| `build_dependencies`      | A real prerequisite imposed by the build toolchain    | Yes, in the build graph             |
+| `runtime_references`      | Files loaded or used when the application runs        | No                                  |
+| `contract_references`     | Cross-file requirements that must agree               | No                                  |
+| `validation_targets`      | Files a test or validator examines                    | No                                  |
+
+There should be no implicit conversion between these fields.
+
+For example, `tests/test_logic.js` validating `app.js` does not mean `app.js` is a prerequisite for generating the test source. It means the test must be executed against the assembled application.
+
+### The TaskFlow Pro cycle, correctly represented
+
+| File                  | Relationship            | Target            | Correct treatment                    |
+| --------------------- | ----------------------- | ----------------- | ------------------------------------ |
+| `index.html`          | Runtime reference       | `styles.css`      | Load stylesheet                      |
+| `index.html`          | Runtime reference       | `app.js`          | Load script                          |
+| `styles.css`          | Contract reference      | `index.html`      | Validate CSS selectors against HTML  |
+| `app.js`              | Contract reference      | `index.html`      | Validate DOM references against HTML |
+| `tests/test_logic.js` | Validation target       | `app.js`          | Test application logic               |
+| `README.md`           | Documentation reference | Application files | Describe deliverables                |
+
+There is no reason for these relationships to create a cycle in the generation-order graph.
+
+## 3. Implement two independent directed acyclic graphs
+
+The current cycle detector should not simply be weakened. It should operate on the correct graph.
+
+Graph A — Generation prerequisites
+
+An edge `A → B` means: generate `B` before generating `A`.
+
+This graph contains only `generation_dependencies`.
+
+Graph B — Build prerequisites
+
+An edge `A → B` means: process `B` before building `A`.
+
+This graph contains only `build_dependencies`.
+
+Each graph receives its own cycle detection, diagnostics, and topological ordering.
+
+The following relationships must never be silently inserted into either graph:
+
+- HTML loading CSS or JavaScript.
+- JavaScript accessing HTML elements.
+- CSS selectors matching HTML classes.
+- Tests examining application files.
+- Documentation mentioning application files.
+
+### Cycle detector requirements
+
+The cycle detector must:
+
+1. Reject unknown file paths.
+2. Reject self-dependencies.
+3. Reject duplicate edges.
+4. Report the complete cycle path, not just the set of files.
+5. Report the relationship type and its declared reason.
+6. Distinguish an invalid reference from a genuine dependency cycle.
+7. Never automatically delete a valid dependency just to make the graph acyclic.
+
+Example diagnostic:
+
+```
+DEPENDENCY_CYCLE_DETECTED
+
+Graph: generation_dependencies
+
+Cycle:
+  service.py
+    -> models.py
+    -> service.py
+
+Evidence:
+  service.py requires models.py
+  models.py requires service.py
+
+Action:
+  BLOCKED
+
+No dependency edges were silently removed.
+```
+
+A genuine cycle must be resolved through interface separation, a shared contract, or a corrected generation plan—not by hiding the cycle.
+
+## 4. Add semantic validation before topological sorting
+
+The planner's declaration should be treated as a proposal, not authoritative truth.
+
+A deterministic validator should check whether the relationship is plausible for the file types involved.
+
+| Source        | Target           | Expected interpretation                           |
+| ------------- | ---------------- | ------------------------------------------------- |
+| HTML          | CSS              | Runtime stylesheet reference                      |
+| HTML          | JavaScript       | Runtime script reference                          |
+| JavaScript    | HTML             | DOM contract reference                            |
+| CSS           | HTML             | Selector contract reference                       |
+| JavaScript    | JavaScript       | Possibly source import or contract reference      |
+| CSS           | CSS              | Possibly CSS import or contract reference         |
+| Python        | Python           | Possibly source import or generation prerequisite |
+| Test          | Application file | Validation target                                 |
+| Documentation | Any file         | Documentation reference                           |
+
+These are classification expectations, not unconditional rules. For example, a bundler can turn a JavaScript import of a CSS file into a genuine build prerequisite.
+
+The validator should use evidence from the actual project:
+
+- Python: `ast` parsing and import inspection.
+- JavaScript: parser-based import/export inspection.
+- CSS: `@import` inspection and selector parsing.
+- HTML: `script`, `link`, and relevant element references.
+- Tests: test discovery and explicit test target declarations.
+- Documentation: path and link inspection.
+
+Important: use parsers where available, not broad regular expressions that mistake comments, strings, or examples for actual dependencies.
+
+For an unsupported language or ambiguous relationship, return `UNVERIFIED` or `BLOCKED` rather than inventing an edge.
+
+## 5. Add a bounded planner-correction protocol
+
+v7.1.0 stopped after detecting the cycle. v7.1.1 should give the planner one controlled opportunity to correct an invalid manifest before stopping the build.
+
+The correction process:
+
+1. Initial manifest validation
+
+   Validate the schema, file ownership, paths, relationship types, and both dependency graphs.
+2. Produce structured failure evidence
+
+   Send the planner the exact offending edges, their relationship types, file kinds, and cycle path. Do not send the entire project specification again.
+3. Request a manifest correction
+
+   The planner must return a complete corrected manifest or a narrowly scoped patch. Every changed edge must include a reason.
+4. Validate the correction deterministically
+
+   Recheck all paths, ownership, edge types, and cycles. Compare the corrected manifest with the original.
+5. Accept or block
+
+   If valid, continue. If still invalid, stop with `MANIFEST_REPAIR_REJECTED`. No endless planner calls.
+
+The correction must not be allowed to:
+
+- Remove required project files.
+- Change the requested project specification.
+- Change file ownership.
+- Replace required dependencies with invented ones.
+- Weaken validation requirements.
+- Change model configuration or transport settings.
+
+Suggested diagnostic states:
+
+```
+MANIFEST_SCHEMA_INVALID
+MANIFEST_FILE_OWNERSHIP_INVALID
+MANIFEST_REFERENCE_TARGET_MISSING
+MANIFEST_RELATIONSHIP_TYPE_INVALID
+MANIFEST_GENERATION_CYCLE
+MANIFEST_BUILD_CYCLE
+MANIFEST_REPAIR_REQUESTED
+MANIFEST_REPAIR_ACCEPTED
+MANIFEST_REPAIR_REJECTED
+```
+
+## 6. Add a safe migration path for existing manifests and checkpoints
+
+This is essential. The new contract must not corrupt old accepted work.
+
+- Introduce manifest schema version 2.
+- Explicitly identify schema version 1 manifests.
+- Convert only relationships whose meaning can be established reliably.
+- Do not guess whether an ambiguous old dependency was a build dependency or a runtime reference.
+- Mark ambiguous relationships for planner correction.
+- Preserve accepted file contents, hashes, provenance, and unit checkpoints.
+- Reject incompatible checkpoint metadata with a clear diagnostic.
+- Never silently treat a v1 checkpoint as fully validated under v2.
+
+A migration report should show:
+
+```
+MANIFEST MIGRATION
+
+Source schema: v1
+Target schema: v2
+
+Files preserved: ...
+Dependencies classified: ...
+Runtime references classified: ...
+Ambiguous relationships: ...
+
+Migration status: PASS / BLOCKED
+Checkpoint compatibility: PASS / REJECTED
+```
+
+The existing staging folders must remain intact. A new build should use a fresh run ID, not overwrite a failed run.
+
+## 7. Preserve the Stage 5 generation and recovery improvements
+
+The dependency repair must not destabilize the generation engine.
+
+The following v7.1.0 capabilities must remain:
+
+| Capability                    | v7.1.1 requirement             |
+| ----------------------------- | ------------------------------ |
+| Explicit file ownership       | Preserve                       |
+| Dependency-first generation   | Use validated generation graph |
+| Unit checkpoints              | Preserve                       |
+| Hash verification             | Preserve                       |
+| Provenance validation         | Preserve                       |
+| Bounded generation retries    | Preserve                       |
+| Targeted repair               | Preserve                       |
+| Strict CSS unit validation    | Preserve                       |
+| File restoration              | Preserve                       |
+| Dependency-aware regeneration | Re-evaluate using v2 graph     |
+
+For generation, keep the previously established rules:
+
+1. Generate small independently validated units.
+2. Do not regenerate accepted units unnecessarily.
+3. Identify oversized units before spending repeated model calls.
+4. Split oversized units into smaller semantic units.
+5. Generate only missing or rejected portions.
+6. Validate each portion before checkpointing it.
+7. Assemble accepted portions and validate the complete file.
+8. Preserve verified portions if another portion fails.
+9. Enforce `num_predict <= 8192`.
+10. Never convert a non-PASS audit into a successful build.
+
+For the TaskFlow Pro UI, this also means HTML, CSS, and JavaScript contracts must be validated after assembly—not forced into a false generation-order cycle.
+
+## 8. Expand the cross-file contract validation
+
+The previous UI contract problems must become first-class tests.
+
+HTML ↔ CSS
+
+- Every required CSS selector must have a valid target or be explicitly documented as a permitted global, pseudo-class, or state selector.
+- Detect HTML classes with no intended styling where the design contract requires styling.
+- Detect misspelled class names.
+- Detect duplicated or conflicting design tokens.
+- Check responsive breakpoints and overflow conditions.
+
+HTML ↔ JavaScript
+
+- Every required JavaScript DOM reference must resolve to an actual element.
+- Detect missing IDs and class references.
+- Check event listener targets.
+- Detect duplicated IDs.
+- Verify form controls and their expected behavior.
+
+Application ↔ tests
+
+- Verify test files are discovered.
+- Verify their imports and test targets.
+- Run tests against the assembled files, not isolated fragments.
+- Record individual test outcomes.
+
+Browser acceptance
+
+For TaskFlow Pro, the publish gate should require actual browser tests where browser tooling is available:
+
+- Application loads without a fatal console error.
+- Main task creation workflow works.
+- Task editing and deletion work.
+- Filters work.
+- Empty state works.
+- Responsive layout is checked.
+- No missing assets or broken navigation.
+
+If browser tooling is unavailable, report `BROWSER_ACCEPTANCE_NOT_RUN`; do not report browser acceptance as PASS.
+
+## 9. Regression tests required before release
+
+This should be a substantial test suite, not just a few tests for the latest failure.
+
+| Test group                  | Required cases                                                  |
+| --------------------------- | --------------------------------------------------------------- |
+| Manifest schema             | Missing fields, wrong types, unsupported schema version         |
+| File ownership              | CSS assigned to HTML, JS assigned to CSS, duplicate ownership   |
+| Relationship classification | Runtime references versus build prerequisites                   |
+| Generation graph            | Valid DAG, self-cycle, two-file cycle, multi-file cycle         |
+| Build graph                 | Valid bundler imports, actual build cycle                       |
+| Contract references         | HTML/CSS and HTML/JS cross-references                           |
+| Test references             | Test target does not become a generation edge                   |
+| Planner repair              | Corrected cycle, invalid correction, repeated cycle             |
+| Migration                   | v1 conversion, ambiguous edge, incompatible checkpoint          |
+| Recovery                    | Accepted units survive repair and restart                       |
+| Hash integrity              | Modified checkpoint is rejected                                 |
+| Generation                  | Truncation, duplication, malformed units, oversized units       |
+| UI acceptance               | Missing selectors, missing DOM IDs, invalid responsive behavior |
+| Audit                       | Qwen PASS, FAIL, timeout, malformed response                    |
+| Transport                   | Existing `/api/chat` contract and authentication behavior       |
+
+### Required new cycle regression cases
+
+```
+CASE 01: HTML references CSS and JS
+EXPECTED: PASS — no generation cycle
+
+CASE 02: CSS selector contract references HTML
+EXPECTED: PASS — contract relationship only
+
+CASE 03: JavaScript DOM contract references HTML
+EXPECTED: PASS — contract relationship only
+
+CASE 04: Test references application source
+EXPECTED: PASS — validation relationship only
+
+CASE 05: Genuine Python generation dependency cycle
+EXPECTED: BLOCKED or planner correction accepted
+
+CASE 06: Genuine build-tool dependency cycle
+EXPECTED: BLOCKED or planner correction accepted
+
+CASE 07: Planner tries to remove a required file
+EXPECTED: REJECTED
+
+CASE 08: Planner returns a second invalid correction
+EXPECTED: BLOCKED — no further retry
+```
+
+## 10. Proposed v7.1.1 release acceptance gates
+
+I would not release the replacement just because it compiles or because a collection of unit tests passes.
+
+Release checklist
+
+0 of 12 verified
+
+0%
+
+Original v7.1.0 source inspected and protected infrastructure diff-checked
+
+Manifest v2 schema and migration implemented
+
+Separate generation and build dependency graphs implemented
+
+Semantic relationship validation implemented
+
+Bounded planner correction implemented
+
+Cycle and file ownership regression suite passes
+
+Stage 5 generation and checkpoint regression suite passes
+
+HTML/CSS/JS cross-file validation passes
+
+Existing /api/chat transport contract preserved
+
+Independent Qwen audit gate preserved
+
+Full offline regression suite passes
+
+Fresh end-to-end TaskFlow Pro build passes all required gates
+
+This is a release checklist, not a claim that these checks have already passed.
+
+## 11. Infrastructure that must remain untouched
+
+The repair must preserve your existing deployment contract:
+
+| Component           | Required behavior                                         |
+| ------------------- | --------------------------------------------------------- |
+| Cell 2              | Never used                                                |
+| Kaggle Cell 3       | Existing setup unchanged                                  |
+| API endpoint        | Existing `/api/chat`                                      |
+| Authentication      | Existing `ORCHESTRATOR_API_KEY` Bearer authentication     |
+| Public URL          | Existing `CELL3_PUBLIC_URL` / `GEMMA_PUBLIC_URL` handling |
+| ngrok               | Existing setup and token handling                         |
+| Local proxy         | Port `11435`                                              |
+| Tool execution      | `false`                                                   |
+| Model planner       | `qwen3:4b`                                                |
+| Generator/repair    | `gemma4:e4b`                                              |
+| Independent auditor | `qwen2.5-coder:3b`                                        |
+| Proxy configuration | Not modified                                              |
+| Logs                | Existing `ollama-orchestrator-logs` destination           |
+| Progress            | One persistent build progress bar                         |
+
+The required startup messages remain:
+
+```
+Cell 2: NOT USED
+Proxy configuration: NOT MODIFIED
+```
+
+## 12. Implementation order
+
+I recommend this order to avoid introducing several new failure modes at once:
+
+| Phase | Work                                                      | Exit condition                          |
+| ----- | --------------------------------------------------------- | --------------------------------------- |
+| A     | Inspect v7.1.0 source and map existing manifest functions | Exact change locations identified       |
+| B     | Implement v2 relationship schema and migration            | Schema tests pass                       |
+| C     | Implement separate graphs and semantic validator          | Cycle regression tests pass             |
+| D     | Implement bounded planner correction                      | Repair tests pass                       |
+| E     | Integrate with Stage 5 and checkpoints                    | Recovery tests pass                     |
+| F     | Integrate UI cross-file validation                        | UI contract tests pass                  |
+| G     | Run full offline regression suite and source diff         | No regression or infrastructure changes |
+| H     | Deliver complete v7.1.1 source                            | Downloadable file and SHA-256           |
+| I     | Run a fresh TaskFlow Pro build                            | Live evidence gates pass                |
+
+One important limitation: this is an architecture and implementation specification based on the v7.1.0 failure evidence available in our conversation. I have not inspected the complete v7.1.0 source in this turn, so I cannot honestly identify exact function names or claim the implementation is complete.
+
+The next required input is the complete `Cell3_Project_Builder_v7_1_0_Reliability_Release.py` source. Once it is accessible, the repair should be applied to the actual existing functions, with a source diff and regression tests—not by replacing the builder with a newly invented implementation.
+
+My recommendation: treat the manifest relationship separation as the central v7.1.1 change. The cycle detector was not the chronic problem; the ambiguous dependency model feeding it was. Fix that foundation, and the builder can handle Python projects, web applications, tests, and documentation without relying on project-specific dependency exceptions.
