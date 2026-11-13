@@ -1,0 +1,2255 @@
+
+The below Cell1 belong to video generation initialization
+add Codeadd Markdown
+    tags_response = requests.get(
+# ---------------------------------------------------------------------
+
+IMAGE_GENERATION_LOCK = globals().get(
+    "IMAGE_GENERATION_LOCK",
+    threading.Lock()
+)
+
+DREAMSHAPER_READY = True
+
+if pipe is None:
+    raise RuntimeError("DreamShaper pipeline is unavailable.")
+
+# ---------------------------------------------------------------------
+# 15. FINAL READINESS CHECKS
+# ---------------------------------------------------------------------
+
+if not ollama_is_online():
+    raise RuntimeError("Ollama stopped responding during initialization.")
+
+if not DREAMSHAPER_READY:
+    raise RuntimeError("DreamShaper readiness check failed.")
+
+if DEVICE != "cuda:1":
+    raise RuntimeError("DreamShaper is not configured for GPU 1.")
+
+torch.cuda.synchronize(1)
+
+advance_progress(1000, "All startup checks passed")
+INSTALL_BAR.close()
+
+print("\n" + "=" * 75)
+print("UNIFIED AI VIDEO GENERATOR — STARTUP REPORT")
+print("=" * 75)
+
+print("Ollama API:", OLLAMA_URL)
+print("Gemma model:", OLLAMA_MODEL)
+print("Gemma inference: PASS")
+print("DreamShaper:", "READY")
+print("DreamShaper device:", DEVICE)
+print("DreamShaper dtype:", torch.float16)
+print("DreamShaper model directory:", DREAMSHAPER_MODEL_DIR)
+print("Hugging Face authentication: CONFIGURED")
+print("Ngrok authentication:", "CONFIGURED" if NGROK_AUTHTOKEN else "NOT CONFIGURED")
+print("Assets directory:", ASSET_DIR)
+print("Video output directory:", VIDEO_OUTPUT_DIR)
+print("Temporary directory:", TEMP_DIR)
+
+print("\nGPU memory:")
+for gpu_id in range(torch.cuda.device_count()):
+    free_mem, total_mem = torch.cuda.mem_get_info(gpu_id)
+    used_mem = total_mem - free_mem
+
+    print(
+        f"GPU {gpu_id}: "
+        f"{used_mem/1024**3:.2f} GB used / "
+        f"{total_mem/1024**3:.2f} GB total"
+    )
+
+print("\nStartup elapsed:", round(time.time()-START_TIME, 1), "seconds")
+print("=" * 75)
+print("STARTUP COMPLETE — READY FOR CELL 2")
+print("=" * 75)
+
+===========================================================================
+UNIFIED AI VIDEO GENERATOR — STARTUP V3
+Started: 2026-11-13T15:52:11.671176+00:00
+===========================================================================
+AI VIDEO STARTUP: 100%
+ , All startup checks passed
+[    0.0s] Directories ready. Existing assets and videos preserved.
+[    0.3s] Hugging Face authentication configured.
+[    0.3s] Installing: ollama, gTTS, pyngrok
+[    3.8s] Python dependency installation completed.
+[    3.8s] Click version: 8.1.8
+[    3.8s] Installing system packages: zstd
+[   14.4s] Installing Ollama...
+[   23.5s] Ollama installed.
+[   23.5s] Starting Ollama server...
+[   35.8s] Ollama API is responding.
+[   35.8s] Downloading gemma4:e4b through Ollama API...
+[   95.1s] Gemma model download completed and verified.
+[   95.1s] Testing Gemma inference with streamed output...
+Gemma response: 'GEMMA_CELL1_OK'
+[  274.8s] Gemma inference elapsed: 179.7s
+[  274.8s] Gemma inference PASS.
+[  275.4s] Ngrok authentication configured.                                                         
+[  280.8s] GPU 0: Tesla T4 | Free: 9.10 GB | Total: 14.56 GB
+[  281.0s] GPU 1: Tesla T4 | Free: 14.46 GB | Total: 14.56 GB
+[  302.3s] Checking local DreamShaper FP16 cache...
+[  302.3s] Local cache incomplete. Downloading authenticated FP16 files.
+Cache lookup: Cannot find an appropriate cached snapshot folder for the specified revision on the local disk and outgoing traffic has been disabled. To enable repo look-ups and downloads online, pass 'local_files_only=False' as input.
+[  316.2s] DreamShaper FP16 weights verified: 1.99 GiB
+[  316.2s] Loading DreamShaper pipeline onto GPU 1. Please wait...
+Loading pipeline components...: 100%
+ 5/5 [00:02<00:00,  2.77it/s]
+Loading weights: 100%
+ 196/196 [00:00<00:00, 2282.10it/s]
+[  319.3s] DreamShaper pipeline loaded onto GPU 1.
+
+===========================================================================
+UNIFIED AI VIDEO GENERATOR — STARTUP REPORT
+===========================================================================
+Ollama API: http://127.0.0.1:11434
+Gemma model: gemma4:e4b
+Gemma inference: PASS
+DreamShaper: READY
+DreamShaper device: cuda:1
+DreamShaper dtype: torch.float16
+DreamShaper model directory: /root/.cache/huggingface/models--Lykon--dreamshaper-8/snapshots/a7e52b98680b1ba8ff7bce97c7f9f2e2e5337917
+Hugging Face authentication: CONFIGURED
+Ngrok authentication: CONFIGURED
+Assets directory: /kaggle/working/assets
+Video output directory: /kaggle/working/video_outputs
+Temporary directory: /kaggle/working/video_temp
+
+GPU memory:
+GPU 0: 5.46 GB used / 14.56 GB total
+GPU 1: 2.16 GB used / 14.56 GB total
+
+Startup elapsed: 319.3 seconds
+===========================================================================
+STARTUP COMPLETE — READY FOR CELL 2
+===========================================================================
+add Codeadd Markdown
+Cell 2 — Complete video-generation server
+add Codeadd Markdown
+add Codeadd Markdown
+Cell2 V3 MORE ADVANCED
+add Codeadd Markdown
+#   Ollama / Gemma / DreamShaper / GPU 1 / existing directories
+    timeout=5
+)
+
+health_response.raise_for_status()
+
+health_data = health_response.json()
+
+if health_data.get("version") != APP_VERSION:
+    raise RuntimeError("Unexpected API version.")
+
+if health_data.get("build_id") != APP_BUILD_ID:
+    raise RuntimeError("Server build ID does not match this cell.")
+
+print("\n" + "=" * 72)
+print("EDUCATIONAL AI VIDEO GENERATOR V3.2.2")
+print("=" * 72)
+
+print("Version:", APP_VERSION)
+print("Build ID:", APP_BUILD_ID)
+print("Local API:", f"http://127.0.0.1:{PORT}")
+print("Public API:", PUBLIC_URL or "Unavailable")
+print("Health:", f"http://127.0.0.1:{PORT}/health")
+
+print("\nAPI ROUTES")
+print("POST /generate")
+print("GET  /status/{task_id}")
+print("GET  /download/{task_id}")
+print("GET  /subtitles/{task_id}")
+
+print("\nGENERATION SETTINGS")
+print("Default language: Arabic")
+print("Alternative language: English")
+print("Default duration: 3 minutes")
+print("Maximum duration: 10 minutes")
+print("Voice engine: Edge neural TTS")
+print("Narrator consistency: One voice per video")
+print("Image generation: DreamShaper / GPU 1")
+print("Animation generation: AnimateDiff / GPU 0")
+print("Visual relevance inspection: Gemma / Ollama")
+print("Animation backend:", ANIMATION_BACKEND)
+print("Animation model:", ANIMATION_MODEL_ID)
+print("Motion adapter:", MOTION_ADAPTER_ID)
+print("Automatic image regeneration:", MAX_IMAGE_ATTEMPTS)
+print("Video: 1920x1080 / 30 FPS")
+print("Subtitles: Embedded MP4 + downloadable SRT")
+print("Concurrent video jobs: 1")
+print("Animated scene frames:", ANIMATION_FRAMES)
+print("Motion validation: enabled")
+print("Preserve intermediates:", KEEP_TASK_ARTIFACTS)
+print("Output directory:", str(OUTPUT_DIR))
+
+print("=" * 72)
+
+print("\nHEALTH RESPONSE:")
+print(
+    json.dumps(
+        health_data,
+        indent=2,
+        ensure_ascii=False
+    )
+)
+
+log(
+    "Educational AI Video Generator V3.2.2 initialized. "
+    "Local health check passed."
+)
+
+print("\nSERVER STARTUP CHECK: PASS")
+print(
+    "NOTE: This confirms server startup only. "
+    "Actual video generation, TTS, image inspection, "
+    "subtitles and rendering still require an end-to-end test."
+)
+
+Installing edge-tts...
+INFO:     Started server process [50]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+Edge TTS check: 2.4s
+[ 1731.1s] Cell 1 verified. Cell 2 dependencies ready.
+INFO:     127.0.0.1:33882 - "GET /health HTTP/1.1" 200 OK
+Created new ngrok tunnel.
+INFO:     34.11.123.231:0 - "GET /health HTTP/1.1" 200 OK
+PUBLIC URL: https://clambake-refuse-manpower.ngrok-free.dev
+PUBLIC HEALTH STATUS: 200
+PUBLIC HEALTH: {'status': 'ready', 'version': '3.2.2', 'build_id': 'cd134a62c839', 'ollama': 'http://127.0.0.1:11434', 'gemma': 'gemma4:e4b', 'dreamshaper': 'ready', 'animation_backend': 'AnimateDiff', 'animation_device': 'cuda:0', 'dreamshaper_device': 'cuda:1', 'video_resolution': '1920x1080', 'fps': 30, 'languages': ['ar', 'en'], 'default_language': 'ar', 'default_duration_minutes': 3, 'maximum_duration_minutes': 10, 'image_relevance_check': 'Gemma vision', 'voice_engine': 'Edge neural TTS', 'timestamp': '2026-11-13T16:21:04.379860+00:00'}
+NGROK ACCESS: PASS
+INFO:     127.0.0.1:33898 - "GET /health HTTP/1.1" 200 OK
+
+========================================================================
+EDUCATIONAL AI VIDEO GENERATOR V3.2.2
+========================================================================
+Version: 3.2.2
+Build ID: cd134a62c839
+Local API: http://127.0.0.1:8000
+Public API: https://clambake-refuse-manpower.ngrok-free.dev
+Health: http://127.0.0.1:8000/health
+
+API ROUTES
+POST /generate
+GET  /status/{task_id}
+GET  /download/{task_id}
+GET  /subtitles/{task_id}
+
+GENERATION SETTINGS
+Default language: Arabic
+Alternative language: English
+Default duration: 3 minutes
+Maximum duration: 10 minutes
+Voice engine: Edge neural TTS
+Narrator consistency: One voice per video
+Image generation: DreamShaper / GPU 1
+Animation generation: AnimateDiff / GPU 0
+Visual relevance inspection: Gemma / Ollama
+Animation backend: AnimateDiff
+Animation model: runwayml/stable-diffusion-v1-5
+Motion adapter: guoyww/animatediff-motion-adapter-v1-5-2
+Automatic image regeneration: 3
+Video: 1920x1080 / 30 FPS
+Subtitles: Embedded MP4 + downloadable SRT
+Concurrent video jobs: 1
+Animated scene frames: 24
+Motion validation: enabled
+Preserve intermediates: True
+Output directory: /kaggle/working/video_outputs
+========================================================================
+
+HEALTH RESPONSE:
+{
+  "status": "ready",
+  "version": "3.2.2",
+  "build_id": "cd134a62c839",
+  "ollama": "http://127.0.0.1:11434",
+  "gemma": "gemma4:e4b",
+  "dreamshaper": "ready",
+  "animation_backend": "AnimateDiff",
+  "animation_device": "cuda:0",
+  "dreamshaper_device": "cuda:1",
+  "video_resolution": "1920x1080",
+  "fps": 30,
+  "languages": [
+    "ar",
+    "en"
+  ],
+  "default_language": "ar",
+  "default_duration_minutes": 3,
+  "maximum_duration_minutes": 10,
+  "image_relevance_check": "Gemma vision",
+  "voice_engine": "Edge neural TTS",
+  "timestamp": "2026-11-13T16:21:04.397372+00:00"
+}
+[ 1732.7s] Educational AI Video Generator V3.2.2 initialized. Local health check passed.
+
+SERVER STARTUP CHECK: PASS
+NOTE: This confirms server startup only. Actual video generation, TTS, image inspection, subtitles and rendering still require an end-to-end test.
+add Codeadd Markdown
+import requests
+import json
+
+API = "https://clambake-refuse-manpower.ngrok-free.dev"
+
+payload = {
+    "prompt": "Create an educational video explaining how the human heart works, how blood circulates through the body, and why the heart is important. Explain it simply and accurately for children and young people. Use clear examples and a logical teaching sequence.",
+    "language": "ar",
+    "duration_minutes": 3
+}
+
+response = requests.post(
+    f"{API}/generate",
+    json=payload,
+    timeout=60
+)
+
+print("HTTP:", response.status_code)
+print(json.dumps(response.json(), indent=2, ensure_ascii=False))
+INFO:     34.11.123.231:0 - "POST /generate HTTP/1.1" 200 OK
+[TASK 24ff3170] Waiting for the video processing slot.
+[TASK 24ff3170] Started. Language=ar; duration=3 minutes; voice=ar-LB-RamiNeural.
+[TASK 24ff3170] Generating the educational lesson.
+[SCRIPT] Generation 1; JSON attempt 1/3; output budget=8000.
+HTTP: 200
+{
+  "success": true,
+  "task_id": "24ff3170-e97d-4e8e-af71-c76ec314ecbc",
+  "status": "queued",
+  "status_url": "/status/24ff3170-e97d-4e8e-af71-c76ec314ecbc",
+  "download_url": "/download/24ff3170-e97d-4e8e-af71-c76ec314ecbc",
+  "subtitle_url": "/subtitles/24ff3170-e97d-4e8e-af71-c76ec314ecbc",
+  "message": "Educational video generation accepted."
+}
+[SCRIPT] Received in 31.0s | Characters=4090 | Done=True | Reason=stop | Tokens=1226
+[SCRIPT] Valid JSON received. Saved: /kaggle/working/video_temp/gemma_raw_responses/285651461d/generation_1_json_1.txt
+[SCRIPT] Validation 1: 278/390 words; minimum=371; scenes=8/8.
+[SCRIPT] Repairing incomplete scenes and/or expanding narration while preserving the lesson.
+[SCRIPT] Generation 2; JSON attempt 1/3; output budget=8000.
+[SCRIPT] Received in 21.2s | Characters=5061 | Done=True | Reason=stop | Tokens=1511
+[SCRIPT] Valid JSON received. Saved: /kaggle/working/video_temp/gemma_raw_responses/285651461d/generation_2_json_1.txt
+[SCRIPT] Validation 2: 390/390 words; minimum=371; scenes=9/8.
+[SCRIPT] Repairing incomplete scenes and/or expanding narration while preserving the lesson.
+[SCRIPT] Generation 3; JSON attempt 1/3; output budget=8000.
+[SCRIPT] Received in 17.4s | Characters=5017 | Done=True | Reason=stop | Tokens=1498
+[SCRIPT] Valid JSON received. Saved: /kaggle/working/video_temp/gemma_raw_responses/285651461d/generation_3_json_1.txt
+[SCRIPT] Validation 3: 388/390 words; minimum=371; scenes=8/8.
+[SCRIPT] PASS: 388 words; 8 complete scenes.
+[TASK 24ff3170] Lesson ready: 8 scenes, 388 words.
+[TASK 24ff3170] Scene 1/8: generating neural narration.
+[TASK 24ff3170] Scene 1: narration ready, 35.81s.
+[TASK 24ff3170] Scene 1/8: generating matching illustration.
+[TASK 24ff3170] Scene 1: image generation 1/3.
+[IMAGE] DreamShaper positive=50/77, negative=44/77 CLIP tokens.
+100%
+ 16/16 [00:05<00:00,  4.89it/s]
+[TASK 24ff3170] Scene 1: inspecting actual image with Gemma.
+[TASK 24ff3170] Scene 1: relevant=True; observed=An abstract, vibrant, and futuristic depiction of a human heart surrounded by glowing, energetic, and biological-looking lines and structures.; reason=The image clearly features a stylized, glowing heart, which aligns perfectly with the narration's focus on the heart as a vital, energetic organ. The abstract, high-tech aesthetic suits a 'scientific journey' narrative.
+[TASK 24ff3170] Scene 1/8: rendering synchronized video.
+[ANIMATION] Loading motion adapter guoyww/animatediff-motion-adapter-v1-5-2 and SD1.5 base on cuda:0.
+/usr/local/lib/python3.13/dist-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+config.json: 100%
+ 455/455 [00:00<00:00, 50.4kB/s]
+diffusion_pytorch_model.safetensors: reconstructing file: 100%
+ 1.82GB / 1.82GB,  143MB/s  
+diffusion_pytorch_model.safetensors: downloading bytes: 
+ 1.72GB,  124MB/s  
+The config attributes {'motion_activation_fn': 'geglu', 'motion_attention_bias': False, 'motion_cross_attention_dim': None} were passed to MotionAdapter, but are not expected and will be ignored. Please verify your config.json configuration file.
+/usr/local/lib/python3.13/dist-packages/diffusers/utils/deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+model_index.json: 100%
+ 541/541 [00:00<00:00, 60.4kB/s]
+Download complete: 
+ 2.74GB,  609MB/s  
+Reconstruction complete: 100%
+ 2.74GB / 2.74GB,  546MB/s  
+Fetching 15 files: 100%
+ 15/15 [00:15<00:00, 49.50it/s]
+Loading pipeline components...: 100%
+ 6/6 [00:00<00:00,  8.91it/s]
+Loading weights: 100%
+ 196/196 [00:00<00:00, 2284.97it/s]
+There are modules in UNetMotionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+[ANIMATION] VAE slicing enabled.
+[ANIMATION] Attention slicing enabled.
+[ANIMATION] Components placed on cuda:0: vae, text_encoder, unet, motion_adapter
+[ANIMATION] AnimateDiff ready in 40.9s on cuda:0.
+[TASK 24ff3170] Scene 1: AnimateDiff positive=66/77, negative=44/77 CLIP tokens.
+ 92%
+ 12/13 [00:57<00:04,  4.49s/it]
+
+[VIDEO FAILED] Task 24ff3170-e97d-4e8e-af71-c76ec314ecbc
+Traceback (most recent call last):
+  File "/tmp/ipykernel_50/584607586.py", line 2239, in _process_video_task
+    raise RuntimeError(
+    ...<2 lines>...
+    )
+RuntimeError: Scene 1 AnimateDiff frame failed relevance inspection: The image is an abstract texture and does not depict a human heart or any recognizable anatomical subject.
+
+[TASK 24ff3170] FAILED: Scene 1 AnimateDiff frame failed relevance inspection: The image is an abstract texture and does not depict a human heart or any recognizable anatomical subject.. Debug files: /kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc
+add Codeadd Markdown
+TASK_ID = "24ff3170-e97d-4e8e-af71-c76ec314ecbc"
+                "inspection_error": str(e)
+            }
+
+except Exception as e:
+    report["warnings"].append(f"Diffusers inspection failed: {e}")
+
+# 4. Inspect the actual pipeline already loaded by V3.2.2
+try:
+    existing = globals().get("animation_pipe")
+
+    if existing is None:
+        report["existing_animation_pipe"] = {
+            "present": False,
+            "note": "No global animation_pipe found."
+        }
+    else:
+        item = {
+            "present": True,
+            "class": (
+                f"{type(existing).__module__}."
+                f"{type(existing).__name__}"
+            ),
+            "has_load_ip_adapter": hasattr(existing, "load_ip_adapter"),
+            "has_set_ip_adapter_scale": hasattr(existing, "set_ip_adapter_scale"),
+            "has_image_encoder": getattr(existing, "image_encoder", None) is not None,
+            "has_feature_extractor": getattr(existing, "feature_extractor", None) is not None
+        }
+
+        try:
+            item["call_signature"] = str(
+                inspect.signature(existing.__call__)
+            )
+        except Exception as e:
+            item["call_signature_error"] = str(e)
+
+        report["existing_animation_pipe"] = item
+
+except Exception as e:
+    report["warnings"].append(
+        f"Existing animation pipeline inspection failed: {e}"
+    )
+
+# 5. Find PNG files from the failed task
+if TASK_DIR.exists():
+    for p in sorted(TASK_DIR.rglob("*.png")):
+        try:
+            report["task_png_files"].append({
+                "path": str(p),
+                "relative_path": str(p.relative_to(TASK_DIR)),
+                "size_KiB": round(p.stat().st_size / 1024, 1)
+            })
+        except Exception as e:
+            report["warnings"].append(
+                f"Could not inspect {p}: {e}"
+            )
+else:
+    report["warnings"].append(
+        f"Failed task directory does not exist: {TASK_DIR}"
+    )
+
+report["task_directory_exists"] = TASK_DIR.exists()
+report["png_count"] = len(report["task_png_files"])
+report["elapsed_seconds"] = round(time.perf_counter() - _started, 2)
+
+print("\n========== V3.2.3 AUDIT REPORT ==========")
+print(json.dumps(report, indent=2, default=str))
+print("========== END AUDIT REPORT =============")
+
+
+========== V3.2.3 AUDIT REPORT ==========
+{
+  "audit": "V3.2.3 image-conditioning compatibility",
+  "task_id": "24ff3170-e97d-4e8e-af71-c76ec314ecbc",
+  "packages": {
+    "torch": "2.11.0+cu130",
+    "diffusers": "0.42.0",
+    "transformers": "5.20.2",
+    "accelerate": "1.15.0",
+    "huggingface-hub": "1.33.0"
+  },
+  "gpu": [
+    {
+      "index": 0,
+      "name": "Tesla T4",
+      "total_GiB": 14.56,
+      "free_GiB": 5.64
+    },
+    {
+      "index": 1,
+      "name": "Tesla T4",
+      "total_GiB": 14.56,
+      "free_GiB": 12.37
+    }
+  ],
+  "pipeline_classes": {
+    "AnimateDiffPipeline": {
+      "available": true,
+      "class": "diffusers.pipelines.animatediff.pipeline_animatediff.AnimateDiffPipeline",
+      "has_load_ip_adapter": true,
+      "has_set_ip_adapter_scale": true,
+      "call_signature": "(self, prompt: str | list[str] | None = None, num_frames: int | None = 16, height: int | None = None, width: int | None = None, num_inference_steps: int = 50, guidance_scale: float = 7.5, negative_prompt: str | list[str] | None = None, num_videos_per_prompt: int | None = 1, eta: float = 0.0, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.Tensor | None = None, prompt_embeds: torch.Tensor | None = None, negative_prompt_embeds: torch.Tensor | None = None, ip_adapter_image: PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor] | None = None, ip_adapter_image_embeds: list[torch.Tensor] | None = None, output_type: str | None = 'pil', return_dict: bool = True, cross_attention_kwargs: dict[str, typing.Any] | None = None, clip_skip: int | None = None, callback_on_step_end: Optional[Callable[[int, int], NoneType]] = None, callback_on_step_end_tensor_inputs: list[str] = ['latents'], decode_chunk_size: int = 16, **kwargs) -> diffusers.pipelines.animatediff.pipeline_output.AnimateDiffPipelineOutput | tuple"
+    },
+    "AnimateDiffSDXLPipeline": {
+      "available": true,
+      "class": "diffusers.pipelines.animatediff.pipeline_animatediff_sdxl.AnimateDiffSDXLPipeline",
+      "has_load_ip_adapter": true,
+      "has_set_ip_adapter_scale": true,
+      "call_signature": "(self, prompt: str | list[str] = None, prompt_2: str | list[str] | None = None, num_frames: int = 16, height: int | None = None, width: int | None = None, num_inference_steps: int = 50, timesteps: list[int] = None, sigmas: list[float] = None, denoising_end: float | None = None, guidance_scale: float = 5.0, negative_prompt: str | list[str] | None = None, negative_prompt_2: str | list[str] | None = None, num_videos_per_prompt: int | None = 1, eta: float = 0.0, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.Tensor | None = None, prompt_embeds: torch.Tensor | None = None, negative_prompt_embeds: torch.Tensor | None = None, pooled_prompt_embeds: torch.Tensor | None = None, negative_pooled_prompt_embeds: torch.Tensor | None = None, ip_adapter_image: PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor] | None = None, ip_adapter_image_embeds: list[torch.Tensor] | None = None, output_type: str | None = 'pil', return_dict: bool = True, cross_attention_kwargs: dict[str, typing.Any] | None = None, guidance_rescale: float = 0.0, original_size: tuple[int, int] | None = None, crops_coords_top_left: tuple[int, int] = (0, 0), target_size: tuple[int, int] | None = None, negative_original_size: tuple[int, int] | None = None, negative_crops_coords_top_left: tuple[int, int] = (0, 0), negative_target_size: tuple[int, int] | None = None, clip_skip: int | None = None, callback_on_step_end: Optional[Callable[[int, int], NoneType]] = None, callback_on_step_end_tensor_inputs: list[str] = ['latents']) -> diffusers.pipelines.animatediff.pipeline_output.AnimateDiffPipelineOutput | tuple"
+    },
+    "AnimateDiffVideoToVideoPipeline": {
+      "available": true,
+      "class": "diffusers.pipelines.animatediff.pipeline_animatediff_video2video.AnimateDiffVideoToVideoPipeline",
+      "has_load_ip_adapter": true,
+      "has_set_ip_adapter_scale": true,
+      "call_signature": "(self, video: list[list[PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor]]] = None, prompt: str | list[str] | None = None, height: int | None = None, width: int | None = None, num_inference_steps: int = 50, enforce_inference_steps: bool = False, timesteps: list[int] | None = None, sigmas: list[float] | None = None, guidance_scale: float = 7.5, strength: float = 0.8, negative_prompt: str | list[str] | None = None, num_videos_per_prompt: int | None = 1, eta: float = 0.0, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.Tensor | None = None, prompt_embeds: torch.Tensor | None = None, negative_prompt_embeds: torch.Tensor | None = None, ip_adapter_image: PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor] | None = None, ip_adapter_image_embeds: list[torch.Tensor] | None = None, output_type: str | None = 'pil', return_dict: bool = True, cross_attention_kwargs: dict[str, typing.Any] | None = None, clip_skip: int | None = None, callback_on_step_end: Optional[Callable[[int, int], NoneType]] = None, callback_on_step_end_tensor_inputs: list[str] = ['latents'], decode_chunk_size: int = 16) -> diffusers.pipelines.animatediff.pipeline_output.AnimateDiffPipelineOutput | tuple"
+    },
+    "AnimateDiffControlNetPipeline": {
+      "available": true,
+      "class": "diffusers.pipelines.animatediff.pipeline_animatediff_controlnet.AnimateDiffControlNetPipeline",
+      "has_load_ip_adapter": true,
+      "has_set_ip_adapter_scale": true,
+      "call_signature": "(self, prompt: str | list[str] = None, num_frames: int | None = 16, height: int | None = None, width: int | None = None, num_inference_steps: int = 50, guidance_scale: float = 7.5, negative_prompt: str | list[str] | None = None, num_videos_per_prompt: int | None = 1, eta: float = 0.0, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.Tensor | None = None, prompt_embeds: torch.Tensor | None = None, negative_prompt_embeds: torch.Tensor | None = None, ip_adapter_image: PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor] | None = None, ip_adapter_image_embeds: PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor] | None = None, conditioning_frames: list[PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor]] | None = None, output_type: str | None = 'pil', return_dict: bool = True, cross_attention_kwargs: dict[str, typing.Any] | None = None, controlnet_conditioning_scale: float | list[float] = 1.0, guess_mode: bool = False, control_guidance_start: float | list[float] = 0.0, control_guidance_end: float | list[float] = 1.0, clip_skip: int | None = None, callback_on_step_end: Optional[Callable[[int, int], NoneType]] = None, callback_on_step_end_tensor_inputs: list[str] = ['latents'], decode_chunk_size: int = 16) -> diffusers.pipelines.animatediff.pipeline_output.AnimateDiffPipelineOutput | tuple"
+    },
+    "StableVideoDiffusionPipeline": {
+      "available": true,
+      "class": "diffusers.pipelines.stable_video_diffusion.pipeline_stable_video_diffusion.StableVideoDiffusionPipeline",
+      "has_load_ip_adapter": false,
+      "has_set_ip_adapter_scale": false,
+      "call_signature": "(self, image: PIL.Image.Image | list[PIL.Image.Image] | torch.Tensor, height: int = 576, width: int = 1024, num_frames: int | None = None, num_inference_steps: int = 25, sigmas: list[float] | None = None, min_guidance_scale: float = 1.0, max_guidance_scale: float = 3.0, fps: int = 7, motion_bucket_id: int = 127, noise_aug_strength: float = 0.02, decode_chunk_size: int | None = None, num_videos_per_prompt: int | None = 1, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.Tensor | None = None, output_type: str | None = 'pil', callback_on_step_end: Optional[Callable[[int, int], NoneType]] = None, callback_on_step_end_tensor_inputs: list[str] = ['latents'], return_dict: bool = True) -> diffusers.pipelines.stable_video_diffusion.pipeline_stable_video_diffusion.StableVideoDiffusionPipelineOutput | list[list[PIL.Image.Image]] | numpy.ndarray | torch.Tensor"
+    },
+    "I2VGenXLPipeline": {
+      "available": true,
+      "class": "diffusers.pipelines.deprecated.i2vgen_xl.pipeline_i2vgen_xl.I2VGenXLPipeline",
+      "has_load_ip_adapter": false,
+      "has_set_ip_adapter_scale": false,
+      "call_signature": "(self, prompt: str | list[str] = None, image: PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor] = None, height: int | None = 704, width: int | None = 1280, target_fps: int | None = 16, num_frames: int = 16, num_inference_steps: int = 50, guidance_scale: float = 9.0, negative_prompt: str | list[str] | None = None, eta: float = 0.0, num_videos_per_prompt: int | None = 1, decode_chunk_size: int | None = 1, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.Tensor | None = None, prompt_embeds: torch.Tensor | None = None, negative_prompt_embeds: torch.Tensor | None = None, output_type: str | None = 'pil', return_dict: bool = True, cross_attention_kwargs: dict[str, typing.Any] | None = None, clip_skip: int | None = 1)"
+    },
+    "CogVideoXImageToVideoPipeline": {
+      "available": true,
+      "class": "diffusers.pipelines.cogvideo.pipeline_cogvideox_image2video.CogVideoXImageToVideoPipeline",
+      "has_load_ip_adapter": false,
+      "has_set_ip_adapter_scale": false,
+      "call_signature": "(self, image: PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor], prompt: str | list[str] | None = None, negative_prompt: str | list[str] | None = None, height: int | None = None, width: int | None = None, num_frames: int = 49, num_inference_steps: int = 50, timesteps: list[int] | None = None, guidance_scale: float = 6, use_dynamic_cfg: bool = False, num_videos_per_prompt: int = 1, eta: float = 0.0, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.FloatTensor | None = None, prompt_embeds: torch.FloatTensor | None = None, negative_prompt_embeds: torch.FloatTensor | None = None, output_type: str = 'pil', return_dict: bool = True, attention_kwargs: dict[str, typing.Any] | None = None, callback_on_step_end: Union[Callable[[int, int], NoneType], diffusers.callbacks.PipelineCallback, diffusers.callbacks.MultiPipelineCallbacks, NoneType] = None, callback_on_step_end_tensor_inputs: list[str] = ['latents'], max_sequence_length: int = 226) -> diffusers.pipelines.cogvideo.pipeline_output.CogVideoXPipelineOutput | tuple"
+    },
+    "WanImageToVideoPipeline": {
+      "available": true,
+      "class": "diffusers.pipelines.wan.pipeline_wan_i2v.WanImageToVideoPipeline",
+      "has_load_ip_adapter": false,
+      "has_set_ip_adapter_scale": false,
+      "call_signature": "(self, image: PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor], prompt: str | list[str] = None, negative_prompt: str | list[str] = None, height: int = 480, width: int = 832, num_frames: int = 81, num_inference_steps: int = 50, guidance_scale: float = 5.0, guidance_scale_2: float | None = None, num_videos_per_prompt: int | None = 1, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.Tensor | None = None, prompt_embeds: torch.Tensor | None = None, negative_prompt_embeds: torch.Tensor | None = None, image_embeds: torch.Tensor | None = None, last_image: torch.Tensor | None = None, output_type: str | None = 'np', return_dict: bool = True, attention_kwargs: dict[str, typing.Any] | None = None, callback_on_step_end: Union[Callable[[int, int], NoneType], diffusers.callbacks.PipelineCallback, diffusers.callbacks.MultiPipelineCallbacks, NoneType] = None, callback_on_step_end_tensor_inputs: list[str] = ['latents'], max_sequence_length: int = 512) -> diffusers.pipelines.wan.pipeline_output.WanPipelineOutput | tuple"
+    },
+    "LTXImageToVideoPipeline": {
+      "available": true,
+      "class": "diffusers.pipelines.ltx.pipeline_ltx_image2video.LTXImageToVideoPipeline",
+      "has_load_ip_adapter": false,
+      "has_set_ip_adapter_scale": false,
+      "call_signature": "(self, image: PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor] = None, prompt: str | list[str] = None, negative_prompt: str | list[str] | None = None, height: int = 512, width: int = 704, num_frames: int = 161, frame_rate: int = 25, num_inference_steps: int = 50, timesteps: list[int] = None, guidance_scale: float = 3, guidance_rescale: float = 0.0, num_videos_per_prompt: int | None = 1, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.Tensor | None = None, prompt_embeds: torch.Tensor | None = None, prompt_attention_mask: torch.Tensor | None = None, negative_prompt_embeds: torch.Tensor | None = None, negative_prompt_attention_mask: torch.Tensor | None = None, decode_timestep: float | list[float] = 0.0, decode_noise_scale: float | list[float] | None = None, output_type: str | None = 'pil', return_dict: bool = True, attention_kwargs: dict[str, typing.Any] | None = None, callback_on_step_end: Optional[Callable[[int, int], NoneType]] = None, callback_on_step_end_tensor_inputs: list[str] = ['latents'], max_sequence_length: int = 128) -> diffusers.pipelines.ltx.pipeline_output.LTXPipelineOutput | tuple"
+    }
+  },
+  "existing_animation_pipe": {
+    "present": false,
+    "note": "No global animation_pipe found."
+  },
+  "task_png_files": [
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01.png",
+      "relative_path": "scene_01.png",
+      "size_KiB": 444.5
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_first_frame.png",
+      "relative_path": "scene_01_animation_first_frame.png",
+      "size_KiB": 470.9
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0000.png",
+      "relative_path": "scene_01_animation_frames/frame_0000.png",
+      "size_KiB": 470.9
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0001.png",
+      "relative_path": "scene_01_animation_frames/frame_0001.png",
+      "size_KiB": 482.8
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0002.png",
+      "relative_path": "scene_01_animation_frames/frame_0002.png",
+      "size_KiB": 599.5
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0003.png",
+      "relative_path": "scene_01_animation_frames/frame_0003.png",
+      "size_KiB": 579.2
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0004.png",
+      "relative_path": "scene_01_animation_frames/frame_0004.png",
+      "size_KiB": 605.1
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0005.png",
+      "relative_path": "scene_01_animation_frames/frame_0005.png",
+      "size_KiB": 564.7
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0006.png",
+      "relative_path": "scene_01_animation_frames/frame_0006.png",
+      "size_KiB": 609.2
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0007.png",
+      "relative_path": "scene_01_animation_frames/frame_0007.png",
+      "size_KiB": 530.6
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0008.png",
+      "relative_path": "scene_01_animation_frames/frame_0008.png",
+      "size_KiB": 538.4
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0009.png",
+      "relative_path": "scene_01_animation_frames/frame_0009.png",
+      "size_KiB": 565.0
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0010.png",
+      "relative_path": "scene_01_animation_frames/frame_0010.png",
+      "size_KiB": 549.9
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0011.png",
+      "relative_path": "scene_01_animation_frames/frame_0011.png",
+      "size_KiB": 572.9
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0012.png",
+      "relative_path": "scene_01_animation_frames/frame_0012.png",
+      "size_KiB": 606.4
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0013.png",
+      "relative_path": "scene_01_animation_frames/frame_0013.png",
+      "size_KiB": 585.5
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0014.png",
+      "relative_path": "scene_01_animation_frames/frame_0014.png",
+      "size_KiB": 494.7
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0015.png",
+      "relative_path": "scene_01_animation_frames/frame_0015.png",
+      "size_KiB": 511.9
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0016.png",
+      "relative_path": "scene_01_animation_frames/frame_0016.png",
+      "size_KiB": 512.3
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0017.png",
+      "relative_path": "scene_01_animation_frames/frame_0017.png",
+      "size_KiB": 473.3
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0018.png",
+      "relative_path": "scene_01_animation_frames/frame_0018.png",
+      "size_KiB": 562.6
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0019.png",
+      "relative_path": "scene_01_animation_frames/frame_0019.png",
+      "size_KiB": 580.8
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0020.png",
+      "relative_path": "scene_01_animation_frames/frame_0020.png",
+      "size_KiB": 546.3
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0021.png",
+      "relative_path": "scene_01_animation_frames/frame_0021.png",
+      "size_KiB": 516.8
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0022.png",
+      "relative_path": "scene_01_animation_frames/frame_0022.png",
+      "size_KiB": 513.9
+    },
+    {
+      "path": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01_animation_frames/frame_0023.png",
+      "relative_path": "scene_01_animation_frames/frame_0023.png",
+      "size_KiB": 490.7
+    }
+  ],
+  "warnings": [],
+  "cuda_available": true,
+  "task_directory_exists": true,
+  "png_count": 26,
+  "elapsed_seconds": 0.22
+}
+========== END AUDIT REPORT =============
+add Codeadd Markdown
+        x = (i % cols) * cell_w
+        y = (i // cols) * cell_h
+        sheet.paste(im, (x, y))
+        draw.text((x + 5, y + 260), labels[i], fill="black")
+
+    contact_path = OUTPUT_DIR / "conditioning_contact_sheet.jpg"
+    sheet.save(contact_path, quality=92)
+
+    print("\nPREVIEW GENERATED")
+    print("Frames:", len(frames))
+    print("Frame directory:", frame_dir)
+    print("Contact sheet:", contact_path)
+    print("Elapsed seconds:", round(time.perf_counter() - started, 1))
+
+    display(sheet)
+
+except Exception:
+    print("\nIMAGE-CONDITIONING TEST FAILED")
+    traceback.print_exc()
+
+finally:
+    if pipe is not None:
+        try:
+            pipe.maybe_free_model_hooks()
+            del pipe
+        except Exception:
+            pass
+
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    print("\nTest finished. No full video was generated.")
+
+/usr/local/lib/python3.13/dist-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+The config attributes {'motion_activation_fn': 'geglu', 'motion_attention_bias': False, 'motion_cross_attention_dim': None} were passed to MotionAdapter, but are not expected and will be ignored. Please verify your config.json configuration file.
+V3.2.3 conditioning test started.
+Source: /kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01.png
+Settings: frames=16, steps=16, strength=0.45, IP scale=0.9, seed=12345
+Source image loaded: (512, 512)
+
+Loading AnimateDiff motion adapter...
+
+Loading image-conditioned video pipeline...
+Download complete: 
+ 4.75GB, 4.28MB/s  
+Reconstruction complete: 100%
+ 5.48GB / 5.48GB,  127MB/s  
+Fetching 15 files: 100%
+ 15/15 [00:44<00:00,  3.46s/it]
+Loading pipeline components...: 100%
+ 6/6 [00:09<00:00,  1.19s/it]
+Loading weights: 100%
+ 196/196 [00:01<00:00,  1.11it/s]
+There are modules in UNetMotionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+
+Loading SD 1.5 IP-Adapter...
+models/ip-adapter_sd15.bin: reconstructing file: 100%
+ 44.6MB / 44.6MB, 4.36MB/s  
+models/ip-adapter_sd15.bin: downloading bytes: 
+ 44.6MB, 4.28MB/s  
+config.json: 100%
+ 560/560 [00:00<00:00, 54.3kB/s]
+models/image_encoder/model.safetensors: reconstructing file: 100%
+ 2.53GB / 2.53GB,  201MB/s  
+models/image_encoder/model.safetensors: downloading bytes: 
+ 2.40GB,  161MB/s  
+Loading weights: 100%
+ 520/520 [00:00<00:00, 503.72it/s]
+There are modules in UNetMotionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+Traceback (most recent call last):
+  File "/tmp/ipykernel_50/85216534.py", line 81, in <cell line: 0>
+    pipe.enable_vae_slicing()
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/diffusers/configuration_utils.py", line 175, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'AnimateDiffVideoToVideoPipeline' object has no attribute 'enable_vae_slicing'
+
+IMAGE-CONDITIONING TEST FAILED
+
+Test finished. No full video was generated.
+add Codeadd Markdown
+c
+    print("\n[5/5] Generating conditioned preview...")
+    print("[INFO] This is a preview test, not the full video.")
+
+    result = pipe(**generation_args)
+
+    generated = result.frames[0]
+
+    if not generated:
+        raise RuntimeError("Pipeline returned zero frames.")
+
+    print(f"\n[RESULT] Pipeline returned {len(generated)} frames.")
+
+    # Save all generated frames.
+    saved_frames = []
+
+    for index, frame in enumerate(generated):
+        if not isinstance(frame, Image.Image):
+            frame = Image.fromarray(frame)
+
+        frame = frame.convert("RGB")
+        frame_path = FRAMES_DIR / f"frame_{index:04d}.png"
+        frame.save(frame_path)
+        saved_frames.append(frame)
+
+    # Save first frame separately.
+    first_frame_path = OUTPUT_DIR / "preview_first_frame.png"
+    saved_frames[0].save(first_frame_path)
+
+    # -------------------- CONTACT SHEET --------------------
+
+    columns = 4
+    rows = (len(saved_frames) + columns - 1) // columns
+    thumb_size = (256, 256)
+
+    sheet = Image.new(
+        "RGB",
+        (columns * thumb_size[0], rows * (thumb_size[1] + 28)),
+        "white"
+    )
+
+    draw = ImageDraw.Draw(sheet)
+
+    for index, frame in enumerate(saved_frames):
+        thumb = ImageOps.fit(frame, thumb_size)
+        x = (index % columns) * thumb_size[0]
+        y = (index // columns) * (thumb_size[1] + 28)
+
+        sheet.paste(thumb, (x, y))
+        draw.text((x + 8, y + thumb_size[1] + 5),
+                  f"Frame {index:02d}", fill="black")
+
+    contact_path = OUTPUT_DIR / "preview_contact_sheet.png"
+    sheet.save(contact_path)
+
+    elapsed = time.time() - started
+
+    print("\n" + "=" * 65)
+    print("PREVIEW GENERATION COMPLETED — VISUAL APPROVAL STILL REQUIRED")
+    print("=" * 65)
+    print(f"Frames generated: {len(saved_frames)}")
+    print(f"Frames folder:    {FRAMES_DIR}")
+    print(f"First frame:      {first_frame_path}")
+    print(f"Contact sheet:    {contact_path}")
+    print(f"Elapsed:          {elapsed:.1f} seconds")
+    print("\nDo not proceed to full animation until the frames are inspected.")
+
+except Exception:
+    print("\n[ERROR] V3.2.3 preview test failed.")
+    traceback.print_exc()
+    raise
+
+finally:
+    if pipe is not None:
+        del pipe
+
+    if "motion_adapter" in locals():
+        del motion_adapter
+
+    gc.collect()
+    torch.cuda.empty_cache()
+    print("\n[CLEANUP] Pipeline references released; CUDA cache cleared.")
+
+The config attributes {'motion_activation_fn': 'geglu', 'motion_attention_bias': False, 'motion_cross_attention_dim': None} were passed to MotionAdapter, but are not expected and will be ignored. Please verify your config.json configuration file.
+=================================================================
+V3.2.3 IMAGE-CONDITIONED PREVIEW TEST
+=================================================================
+[INPUT] /kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01.png
+[INPUT] Image size: (512, 512)
+[GPU] Tesla T4
+[GPU] Free memory: 10.56 GiB
+
+[1/5] Loading motion adapter...
+
+[2/5] Loading image-to-video pipeline...
+/usr/local/lib/python3.13/dist-packages/diffusers/utils/deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+Loading pipeline components...: 100%
+ 6/6 [00:01<00:00,  5.55it/s]
+Loading weights: 100%
+ 196/196 [00:00<00:00, 1351.22it/s]
+There are modules in UNetMotionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+
+[3/5] Loading IP-Adapter image conditioning...
+Loading weights: 100%
+ 520/520 [00:00<00:00, 925.62it/s]
+There are modules in UNetMotionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+There are modules in AutoencoderKL that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+[MEMORY] enable_vae_slicing() unavailable; skipped.
+[MEMORY] Enabled enable_attention_slicing().
+[MEMORY] Model CPU offloading enabled.
+
+[4/5] Preparing reference video...
+[CHECK] Video input: batch of 1 video, 16 frames
+[CHECK] IP-Adapter image supplied: yes
+[CHECK] IP-Adapter scale: 0.9
+[CHECK] Strength: 0.45
+[CHECK] Seed: 12345
+
+[5/5] Generating conditioned preview...
+[INFO] This is a preview test, not the full video.
+There are modules in AutoencoderKL that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+ 88%
+ 7/8 [00:23<00:02,  2.91s/it]
+
+[RESULT] Pipeline returned 16 frames.
+
+=================================================================
+PREVIEW GENERATION COMPLETED — VISUAL APPROVAL STILL REQUIRED
+=================================================================
+Frames generated: 16
+Frames folder:    /kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/v3_2_3_conditioning_test/preview_frames
+First frame:      /kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/v3_2_3_conditioning_test/preview_first_frame.png
+Contact sheet:    /kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/v3_2_3_conditioning_test/preview_contact_sheet.png
+Elapsed:          53.5 seconds
+
+Do not proceed to full animation until the frames are inspected.
+
+[CLEANUP] Pipeline references released; CUDA cache cleared.
+add Codeadd Markdown
+arrow_upwardarrow_downwarddelete
+    "diffusers.loaders",
+]:
+    try:
+        module = importlib.import_module(module_name)
+        print("\nMODULE:", module_name, getattr(module, "__file__", None))
+        for class_name in ["IPAdapterMixin"]:
+            cls = getattr(module, class_name, None)
+            if cls is not None:
+                for method_name in [
+                    "load_ip_adapter",
+                    "set_ip_adapter_scale",
+                    "prepare_ip_adapter_image_embeds",
+                ]:
+                    method = getattr(cls, method_name, None)
+                    if method is not None:
+                        show_signature(method, class_name + "." + method_name)
+                        show_source_windows(
+                            method,
+                            class_name + "." + method_name,
+                            keywords=[
+                                "image", "encoder", "embedding",
+                                "processor", "projection", "scale",
+                                "adapter", "hidden_states",
+                            ],
+                            radius=4,
+                            max_lines=120,
+                        )
+    except Exception as e:
+        print("MODULE IMPORT ERROR:", repr(e))
+
+print("\n" + "=" * 90)
+print("AUDIT COMPLETE — NO INFERENCE WAS RUN")
+print("=" * 90)
+
+==========================================================================================
+V3.2.3 CONDITIONING IMPLEMENTATION AUDIT
+==========================================================================================
+Torch: 2.11.0+cu130
+Diffusers: 0.42.0
+CUDA available: True
+GPU 0: Tesla T4 | free=8.54 GiB | total=14.56 GiB
+GPU 1: Tesla T4 | free=14.41 GiB | total=14.56 GiB
+
+
+##########################################################################################
+CLASS: diffusers.pipelines.animatediff.pipeline_animatediff_video2video.AnimateDiffVideoToVideoPipeline
+FILE: /usr/local/lib/python3.13/dist-packages/diffusers/pipelines/animatediff/pipeline_animatediff_video2video.py
+MRO: AnimateDiffVideoToVideoPipeline -> DiffusionPipeline -> ConfigMixin -> PushToHubMixin -> StableDiffusionMixin -> TextualInversionLoaderMixin -> IPAdapterMixin -> StableDiffusionLoraLoaderMixin -> LoraBaseMixin -> FreeInitMixin -> AnimateDiffFreeNoiseMixin -> FromSingleFileMixin -> object
+
+--- SIGNATURE: AnimateDiffVideoToVideoPipeline.__call__ ---
+(self, video: list[list[PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor]]] = None, prompt: str | list[str] | None = None, height: int | None = None, width: int | None = None, num_inference_steps: int = 50, enforce_inference_steps: bool = False, timesteps: list[int] | None = None, sigmas: list[float] | None = None, guidance_scale: float = 7.5, strength: float = 0.8, negative_prompt: str | list[str] | None = None, num_videos_per_prompt: int | None = 1, eta: float = 0.0, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.Tensor | None = None, prompt_embeds: torch.Tensor | None = None, negative_prompt_embeds: torch.Tensor | None = None, ip_adapter_image: PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor] | None = None, ip_adapter_image_embeds: list[torch.Tensor] | None = None, output_type: str | None = 'pil', return_dict: bool = True, cross_attention_kwargs: dict[str, typing.Any] | None = None, clip_skip: int | None = None, callback_on_step_end: Optional[Callable[[int, int], NoneType]] = None, callback_on_step_end_tensor_inputs: list[str] = ['latents'], decode_chunk_size: int = 16) -> diffusers.pipelines.animatediff.pipeline_output.AnimateDiffPipelineOutput | tuple
+
+--- SIGNATURE: AnimateDiffVideoToVideoPipeline.check_inputs ---
+(self, prompt, strength, height, width, video=None, latents=None, negative_prompt=None, prompt_embeds=None, negative_prompt_embeds=None, ip_adapter_image=None, ip_adapter_image_embeds=None, callback_on_step_end_tensor_inputs=None)
+
+========================= SOURCE: AnimateDiffVideoToVideoPipeline.check_inputs =========================
+  554:     def check_inputs(
+  555:         self,
+  556:         prompt,
+  557:         strength,
+  558:         height,
+  559:         width,
+  560:         video=None,
+  561:         latents=None,
+  562:         negative_prompt=None,
+  563:         prompt_embeds=None,
+  564:         negative_prompt_embeds=None,
+  565:         ip_adapter_image=None,
+  566:         ip_adapter_image_embeds=None,
+  567:         callback_on_step_end_tensor_inputs=None,
+  568:     ):
+  569:         if strength < 0 or strength > 1:
+  570:             raise ValueError(f"The value of strength should in [0.0, 1.0] but is {strength}")
+  571: 
+  572:         if height % 8 != 0 or width % 8 != 0:
+  573:             raise ValueError(f"`height` and `width` have to be divisible by 8 but are {height} and {width}.")
+
+  605:                     f" {negative_prompt_embeds.shape}."
+  606:                 )
+  607: 
+  608:         if video is not None and latents is not None:
+  609:             raise ValueError("Only one of `video` or `latents` should be provided")
+  610: 
+  611:         if ip_adapter_image is not None and ip_adapter_image_embeds is not None:
+  612:             raise ValueError(
+  613:                 "Provide either `ip_adapter_image` or `ip_adapter_image_embeds`. Cannot leave both `ip_adapter_image` and `ip_adapter_image_embeds` defined."
+  614:             )
+  615: 
+  616:         if ip_adapter_image_embeds is not None:
+  617:             if not isinstance(ip_adapter_image_embeds, list):
+  618:                 raise ValueError(
+  619:                     f"`ip_adapter_image_embeds` has to be of type `list` but is {type(ip_adapter_image_embeds)}"
+  620:                 )
+  621:             elif ip_adapter_image_embeds[0].ndim not in [3, 4]:
+  622:                 raise ValueError(
+  623:                     f"`ip_adapter_image_embeds` has to be a list of 3D or 4D tensors but is {ip_adapter_image_embeds[0].ndim}D"
+  624:                 )
+
+
+--- SIGNATURE: AnimateDiffVideoToVideoPipeline.prepare_latents ---
+(self, video: torch.Tensor | None = None, height: int = 64, width: int = 64, num_channels_latents: int = 4, batch_size: int = 1, timestep: int | None = None, dtype: torch.dtype | None = None, device: torch.device | None = None, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.Tensor | None = None, decode_chunk_size: int = 16, add_noise: bool = False) -> torch.Tensor
+
+========================= SOURCE: AnimateDiffVideoToVideoPipeline.prepare_latents =========================
+  635:     def prepare_latents(
+  636:         self,
+  637:         video: torch.Tensor | None = None,
+  638:         height: int = 64,
+  639:         width: int = 64,
+  640:         num_channels_latents: int = 4,
+  641:         batch_size: int = 1,
+  642:         timestep: int | None = None,
+  643:         dtype: torch.dtype | None = None,
+  644:         device: torch.device | None = None,
+  645:         generator: torch.Generator | list[torch.Generator] | None = None,
+  646:         latents: torch.Tensor | None = None,
+  647:         decode_chunk_size: int = 16,
+  648:         add_noise: bool = False,
+  649:     ) -> torch.Tensor:
+  650:         num_frames = video.shape[1] if latents is None else latents.shape[2]
+  651:         shape = (
+  652:             batch_size,
+  653:             num_channels_latents,
+  654:             num_frames,
+  655:             height // self.vae_scale_factor,
+  656:             width // self.vae_scale_factor,
+  657:         )
+  658: 
+  659:         if isinstance(generator, list) and len(generator) != batch_size:
+  660:             raise ValueError(
+  661:                 f"You have passed a list of generators of length {len(generator)}, but requested an effective batch"
+  662:                 f" size of {batch_size}. Make sure the batch size matches the length of the generators."
+  663:             )
+  664: 
+  665:         if latents is None:
+  666:             # make sure the VAE is in float32 mode, as it overflows in float16
+  667:             if self.vae.config.force_upcast:
+  668:                 video = video.float()
+  669:                 self.vae.to(dtype=torch.float32)
+  670: 
+  671:             if isinstance(generator, list):
+  672:                 init_latents = [
+  673:                     self.encode_video(video[i], generator[i], decode_chunk_size).unsqueeze(0)
+  674:                     for i in range(batch_size)
+  675:                 ]
+  676:             else:
+  677:                 init_latents = [self.encode_video(vid, generator, decode_chunk_size).unsqueeze(0) for vid in video]
+  678: 
+  679:             init_latents = torch.cat(init_latents, dim=0)
+  680: 
+  681:             # restore vae to original dtype
+  682:             if self.vae.config.force_upcast:
+  683:                 self.vae.to(dtype)
+  684: 
+  685:             init_latents = init_latents.to(dtype)
+  686:             init_latents = self.vae.config.scaling_factor * init_latents
+  687: 
+  688:             if batch_size > init_latents.shape[0] and batch_size % init_latents.shape[0] == 0:
+  689:                 # expand init_latents for batch_size
+  690:                 error_message = (
+  691:                     f"You have passed {batch_size} text prompts (`prompt`), but only {init_latents.shape[0]} initial"
+  692:                     " images (`image`). Please make sure to update your script to pass as many initial images as text prompts"
+  693:                 )
+  694:                 raise ValueError(error_message)
+  695:             elif batch_size > init_latents.shape[0] and batch_size % init_latents.shape[0] != 0:
+  696:                 raise ValueError(
+  697:                     f"Cannot duplicate `image` of batch size {init_latents.shape[0]} to {batch_size} text prompts."
+  698:                 )
+  699:             else:
+  700:                 init_latents = torch.cat([init_latents], dim=0)
+  701: 
+  702:             noise = randn_tensor(init_latents.shape, generator=generator, device=device, dtype=dtype)
+  703:             latents = self.scheduler.add_noise(init_latents, noise, timestep).permute(0, 2, 1, 3, 4)
+  704:         else:
+  705:             if shape != latents.shape:
+  706:                 # [B, C, F, H, W]
+  707:                 raise ValueError(f"`latents` expected to have {shape=}, but found {latents.shape=}")
+  708: 
+  709:             latents = latents.to(device, dtype=dtype)
+  710: 
+  711:             if add_noise:
+  712:                 noise = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
+  713:                 latents = self.scheduler.add_noise(latents, noise, timestep)
+  714: 
+  715:         return latents
+
+
+--- SIGNATURE: AnimateDiffVideoToVideoPipeline.prepare_ip_adapter_image_embeds ---
+(self, ip_adapter_image, ip_adapter_image_embeds, device, num_images_per_prompt, do_classifier_free_guidance)
+
+========================= SOURCE: AnimateDiffVideoToVideoPipeline.prepare_ip_adapter_image_embeds =========================
+  464:     def prepare_ip_adapter_image_embeds(
+  465:         self, ip_adapter_image, ip_adapter_image_embeds, device, num_images_per_prompt, do_classifier_free_guidance
+  466:     ):
+  467:         image_embeds = []
+  468:         if do_classifier_free_guidance:
+  469:             negative_image_embeds = []
+  470:         if ip_adapter_image_embeds is None:
+  471:             if not isinstance(ip_adapter_image, list):
+  472:                 ip_adapter_image = [ip_adapter_image]
+  473: 
+  474:             if len(ip_adapter_image) != len(self.unet.encoder_hid_proj.image_projection_layers):
+  475:                 raise ValueError(
+  476:                     f"`ip_adapter_image` must have same length as the number of IP Adapters. Got {len(ip_adapter_image)} images and {len(self.unet.encoder_hid_proj.image_projection_layers)} IP Adapters."
+  477:                 )
+  478: 
+  479:             for single_ip_adapter_image, image_proj_layer in zip(
+  480:                 ip_adapter_image, self.unet.encoder_hid_proj.image_projection_layers
+  481:             ):
+  482:                 output_hidden_state = not isinstance(image_proj_layer, ImageProjection)
+  483:                 single_image_embeds, single_negative_image_embeds = self.encode_image(
+  484:                     single_ip_adapter_image, device, 1, output_hidden_state
+  485:                 )
+  486: 
+  487:                 image_embeds.append(single_image_embeds[None, :])
+  488:                 if do_classifier_free_guidance:
+  489:                     negative_image_embeds.append(single_negative_image_embeds[None, :])
+  490:         else:
+  491:             for single_image_embeds in ip_adapter_image_embeds:
+  492:                 if do_classifier_free_guidance:
+  493:                     single_negative_image_embeds, single_image_embeds = single_image_embeds.chunk(2)
+  494:                     negative_image_embeds.append(single_negative_image_embeds)
+  495:                 image_embeds.append(single_image_embeds)
+  496: 
+  497:         ip_adapter_image_embeds = []
+  498:         for i, single_image_embeds in enumerate(image_embeds):
+  499:             single_image_embeds = torch.cat([single_image_embeds] * num_images_per_prompt, dim=0)
+  500:             if do_classifier_free_guidance:
+  501:                 single_negative_image_embeds = torch.cat([negative_image_embeds[i]] * num_images_per_prompt, dim=0)
+  502:                 single_image_embeds = torch.cat([single_negative_image_embeds, single_image_embeds], dim=0)
+  503: 
+  504:             single_image_embeds = single_image_embeds.to(device=device)
+  505:             ip_adapter_image_embeds.append(single_image_embeds)
+  506: 
+  507:         return ip_adapter_image_embeds
+
+
+--- SIGNATURE: AnimateDiffVideoToVideoPipeline.encode_image ---
+(self, image, device, num_images_per_prompt, output_hidden_states=None)
+
+========================= SOURCE: AnimateDiffVideoToVideoPipeline.encode_image =========================
+  439:     def encode_image(self, image, device, num_images_per_prompt, output_hidden_states=None):
+  440:         dtype = next(self.image_encoder.parameters()).dtype
+  441: 
+  442:         if not isinstance(image, torch.Tensor):
+  443:             image = self.feature_extractor(image, return_tensors="pt").pixel_values
+  444: 
+  445:         image = image.to(device=device, dtype=dtype)
+  446:         if output_hidden_states:
+  447:             image_enc_hidden_states = self.image_encoder(image, output_hidden_states=True).hidden_states[-2]
+  448:             image_enc_hidden_states = image_enc_hidden_states.repeat_interleave(num_images_per_prompt, dim=0)
+  449:             uncond_image_enc_hidden_states = self.image_encoder(
+  450:                 torch.zeros_like(image), output_hidden_states=True
+  451:             ).hidden_states[-2]
+  452:             uncond_image_enc_hidden_states = uncond_image_enc_hidden_states.repeat_interleave(
+  453:                 num_images_per_prompt, dim=0
+  454:             )
+  455:             return image_enc_hidden_states, uncond_image_enc_hidden_states
+  456:         else:
+  457:             image_embeds = self.image_encoder(image).image_embeds
+  458:             image_embeds = image_embeds.repeat_interleave(num_images_per_prompt, dim=0)
+  459:             uncond_image_embeds = torch.zeros_like(image_embeds)
+  460: 
+  461:             return image_embeds, uncond_image_embeds
+
+
+--- SIGNATURE: AnimateDiffVideoToVideoPipeline.decode_latents ---
+(self, latents, decode_chunk_size: int = 16)
+
+========================= SOURCE: AnimateDiffVideoToVideoPipeline.decode_latents =========================
+  518:     def decode_latents(self, latents, decode_chunk_size: int = 16):
+  519:         latents = 1 / self.vae.config.scaling_factor * latents
+  520: 
+  521:         batch_size, channels, num_frames, height, width = latents.shape
+  522:         latents = latents.permute(0, 2, 1, 3, 4).reshape(batch_size * num_frames, channels, height, width)
+  523: 
+  524:         video = []
+  525:         for i in range(0, latents.shape[0], decode_chunk_size):
+  526:             batch_latents = latents[i : i + decode_chunk_size]
+  527:             batch_latents = self.vae.decode(batch_latents).sample
+  528:             video.append(batch_latents)
+  529: 
+  530:         video = torch.cat(video)
+  531:         video = video[None, :].reshape((batch_size, num_frames, -1) + video.shape[2:]).permute(0, 2, 1, 3, 4)
+  532:         # we always cast to float32 as this does not cause significant overhead and is compatible with bfloat16
+  533:         video = video.float()
+  534:         return video
+
+
+--- SIGNATURE: AnimateDiffVideoToVideoPipeline.get_timesteps ---
+(self, num_inference_steps, timesteps, strength, device)
+
+========================= SOURCE: AnimateDiffVideoToVideoPipeline.get_timesteps =========================
+  626:     def get_timesteps(self, num_inference_steps, timesteps, strength, device):
+  627:         # get the original timestep using init_timestep
+  628:         init_timestep = min(int(num_inference_steps * strength), num_inference_steps)
+  629: 
+  630:         t_start = max(num_inference_steps - init_timestep, 0)
+  631:         timesteps = timesteps[t_start * self.scheduler.order :]
+  632: 
+  633:         return timesteps, num_inference_steps - t_start
+
+
+--- SIGNATURE: AnimateDiffVideoToVideoPipeline.prepare_extra_step_kwargs ---
+(self, generator, eta)
+
+========================= SOURCE: AnimateDiffVideoToVideoPipeline.prepare_extra_step_kwargs =========================
+No matching source lines.
+
+========================= SOURCE: AnimateDiffVideoToVideoPipeline.__call__ =========================
+  744:     @torch.no_grad()
+  745:     def __call__(
+  746:         self,
+  747:         video: list[list[PipelineImageInput]] = None,
+  748:         prompt: str | list[str] | None = None,
+  749:         height: int | None = None,
+  750:         width: int | None = None,
+  751:         num_inference_steps: int = 50,
+  752:         enforce_inference_steps: bool = False,
+  753:         timesteps: list[int] | None = None,
+  754:         sigmas: list[float] | None = None,
+  755:         guidance_scale: float = 7.5,
+  756:         strength: float = 0.8,
+  757:         negative_prompt: str | list[str] | None = None,
+  758:         num_videos_per_prompt: int | None = 1,
+  759:         eta: float = 0.0,
+  760:         generator: torch.Generator | list[torch.Generator] | None = None,
+  761:         latents: torch.Tensor | None = None,
+  762:         prompt_embeds: torch.Tensor | None = None,
+  763:         negative_prompt_embeds: torch.Tensor | None = None,
+  764:         ip_adapter_image: PipelineImageInput | None = None,
+  765:         ip_adapter_image_embeds: list[torch.Tensor] | None = None,
+  766:         output_type: str | None = "pil",
+  767:         return_dict: bool = True,
+  768:         cross_attention_kwargs: dict[str, Any] | None = None,
+  769:         clip_skip: int | None = None,
+
+  774:         r"""
+  775:         The call function to the pipeline for generation.
+  776: 
+  777:         Args:
+  778:             video (`list[PipelineImageInput]`):
+  779:                 The input video to condition the generation on. Must be a list of images/frames of the video.
+  780:             prompt (`str` or `list[str]`, *optional*):
+  781:                 The prompt or prompts to guide image generation. If not defined, you need to pass `prompt_embeds`.
+  782:             height (`int`, *optional*, defaults to `self.unet.config.sample_size * self.vae_scale_factor`):
+  783:                 The height in pixels of the generated video.
+  784:             width (`int`, *optional*, defaults to `self.unet.config.sample_size * self.vae_scale_factor`):
+  785:                 The width in pixels of the generated video.
+  786:             num_inference_steps (`int`, *optional*, defaults to 50):
+  787:                 The number of denoising steps. More denoising steps usually lead to a higher quality videos at the
+  788:                 expense of slower inference.
+  789:             enforce_inference_steps (`bool`, *optional*, defaults to `False`):
+  790:                 Whether to enforce `num_inference_steps` denoising steps regardless of the `strength` parameter. When
+  791:                 `False`, the effective number of inference steps is reduced according to `strength`.
+  792:             timesteps (`list[int]`, *optional*):
+  793:                 Custom timesteps to use for the denoising process with schedulers which support a `timesteps` argument
+  794:                 in their `set_timesteps` method. If not defined, the default behavior when `num_inference_steps` is
+  795:                 passed will be used. Must be in descending order.
+  796:             sigmas (`list[float]`, *optional*):
+  797:                 Custom sigmas to use for the denoising process with schedulers which support a `sigmas` argument in
+  798:                 their `set_timesteps` method. If not defined, the default behavior when `num_inference_steps` is passed
+  799:                 will be used.
+  800:             strength (`float`, *optional*, defaults to 0.8):
+  801:                 Higher strength leads to more differences between original video and generated video.
+  802:             guidance_scale (`float`, *optional*, defaults to 7.5):
+  803:                 A higher guidance scale value encourages the model to generate images closely linked to the text
+  804:                 `prompt` at the expense of lower image quality. Guidance scale is enabled when `guidance_scale > 1`.
+  805:             negative_prompt (`str` or `list[str]`, *optional*):
+  806:                 The prompt or prompts to guide what to not include in image generation. If not defined, you need to
+  807:                 pass `negative_prompt_embeds` instead. Ignored when not using guidance (`guidance_scale < 1`).
+  808:             num_videos_per_prompt (`int`, *optional*, defaults to 1):
+  809:                 The number of videos to generate per prompt.
+  810:             eta (`float`, *optional*, defaults to 0.0):
+  811:                 Corresponds to parameter eta (η) from the [DDIM](https://huggingface.co/papers/2010.02502) paper. Only
+  812:                 applies to the [`~schedulers.DDIMScheduler`], and is ignored in other schedulers.
+  813:             generator (`torch.Generator` or `list[torch.Generator]`, *optional*):
+  814:                 A [`torch.Generator`](https://pytorch.org/docs/stable/generated/torch.Generator.html) to make
+  815:                 generation deterministic.
+  816:             latents (`torch.Tensor`, *optional*):
+  817:                 Pre-generated noisy latents sampled from a Gaussian distribution, to be used as inputs for video
+  818:                 generation. Can be used to tweak the same generation with different prompts. If not provided, a latents
+  819:                 tensor is generated by sampling using the supplied random `generator`. Latents should be of shape
+  820:                 `(batch_size, num_channel, num_frames, height, width)`.
+  821:             prompt_embeds (`torch.Tensor`, *optional*):
+  822:                 Pre-generated text embeddings. Can be used to easily tweak text inputs (prompt weighting). If not
+  823:                 provided, text embeddings are generated from the `prompt` input argument.
+  824:             negative_prompt_embeds (`torch.Tensor`, *optional*):
+  825:                 Pre-generated negative text embeddings. Can be used to easily tweak text inputs (prompt weighting). If
+  826:                 not provided, `negative_prompt_embeds` are generated from the `negative_prompt` input argument.
+  827:             ip_adapter_image: (`PipelineImageInput`, *optional*):
+  828:                 Optional image input to work with IP Adapters.
+  829:             ip_adapter_image_embeds (`list[torch.Tensor]`, *optional*):
+  830:                 Pre-generated image embeddings for IP-Adapter. It should be a list of length same as number of
+  831:                 IP-adapters. Each element should be a tensor of shape `(batch_size, num_images, emb_dim)`. It should
+  832:                 contain the negative image embedding if `do_classifier_free_guidance` is set to `True`. If not
+  833:                 provided, embeddings are computed from the `ip_adapter_image` input argument.
+  834:             output_type (`str`, *optional*, defaults to `"pil"`):
+  835:                 The output format of the generated video. Choose between `torch.Tensor`, `PIL.Image` or `np.array`.
+  836:             return_dict (`bool`, *optional*, defaults to `True`):
+  837:                 Whether or not to return a [`AnimateDiffPipelineOutput`] instead of a plain tuple.
+  838:             cross_attention_kwargs (`dict`, *optional*):
+  839:                 A kwargs dictionary that if specified is passed along to the [`AttentionProcessor`] as defined in
+
+  864:         # 0. Default height and width to unet
+  865:         height = height or self.unet.config.sample_size * self.vae_scale_factor
+  866:         width = width or self.unet.config.sample_size * self.vae_scale_factor
+  867: 
+  868:         num_videos_per_prompt = 1
+  869: 
+  870:         # 1. Check inputs. Raise error if not correct
+  871:         self.check_inputs(
+  872:             prompt=prompt,
+  873:             strength=strength,
+  874:             height=height,
+  875:             width=width,
+  876:             negative_prompt=negative_prompt,
+  877:             prompt_embeds=prompt_embeds,
+  878:             negative_prompt_embeds=negative_prompt_embeds,
+  879:             video=video,
+  880:             latents=latents,
+  881:             ip_adapter_image=ip_adapter_image,
+  882:             ip_adapter_image_embeds=ip_adapter_image_embeds,
+  883:             callback_on_step_end_tensor_inputs=callback_on_step_end_tensor_inputs,
+  884:         )
+  885: 
+  886:         self._guidance_scale = guidance_scale
+
+  905:         else:
+  906:             timestep_device = device
+  907:         if not enforce_inference_steps:
+  908:             timesteps, num_inference_steps = retrieve_timesteps(
+  909:                 self.scheduler, num_inference_steps, timestep_device, timesteps, sigmas
+  910:             )
+  911:             timesteps, num_inference_steps = self.get_timesteps(num_inference_steps, timesteps, strength, device)
+  912:             latent_timestep = timesteps[:1].repeat(batch_size * num_videos_per_prompt)
+  913:         else:
+  914:             denoising_inference_steps = int(num_inference_steps / strength)
+  915:             timesteps, denoising_inference_steps = retrieve_timesteps(
+  916:                 self.scheduler, denoising_inference_steps, timestep_device, timesteps, sigmas
+  917:             )
+  918:             timesteps = timesteps[-num_inference_steps:]
+  919:             latent_timestep = timesteps[:1].repeat(batch_size * num_videos_per_prompt)
+  920: 
+  921:         # 4. Prepare latent variables
+  922:         if latents is None:
+  923:             video = self.video_processor.preprocess_video(video, height=height, width=width)
+  924:             # Move the number of frames before the number of channels.
+  925:             video = video.permute(0, 2, 1, 3, 4)
+  926:             video = video.to(device=device, dtype=dtype)
+  927:         num_channels_latents = self.unet.config.in_channels
+  928:         latents = self.prepare_latents(
+  929:             video=video,
+  930:             height=height,
+  931:             width=width,
+  932:             num_channels_latents=num_channels_latents,
+  933:             batch_size=batch_size * num_videos_per_prompt,
+  934:             timestep=latent_timestep,
+  935:             dtype=dtype,
+  936:             device=device,
+  937:             generator=generator,
+  938:             latents=latents,
+  939:             decode_chunk_size=decode_chunk_size,
+  940:             add_noise=enforce_inference_steps,
+  941:         )
+  942: 
+  943:         # 5. Encode input prompt
+  944:         text_encoder_lora_scale = (
+  945:             self.cross_attention_kwargs.get("scale", None) if self.cross_attention_kwargs is not None else None
+  946:         )
+  947:         num_frames = latents.shape[2]
+  948:         if self.free_noise_enabled:
+  949:             prompt_embeds, negative_prompt_embeds = self._encode_prompt_free_noise(
+  950:                 prompt=prompt,
+  951:                 num_frames=num_frames,
+  952:                 device=device,
+  953:                 num_videos_per_prompt=num_videos_per_prompt,
+  954:                 do_classifier_free_guidance=self.do_classifier_free_guidance,
+  955:                 negative_prompt=negative_prompt,
+  956:                 prompt_embeds=prompt_embeds,
+  957:                 negative_prompt_embeds=negative_prompt_embeds,
+
+  961:         else:
+  962:             prompt_embeds, negative_prompt_embeds = self.encode_prompt(
+  963:                 prompt,
+  964:                 device,
+  965:                 num_videos_per_prompt,
+  966:                 self.do_classifier_free_guidance,
+  967:                 negative_prompt,
+  968:                 prompt_embeds=prompt_embeds,
+  969:                 negative_prompt_embeds=negative_prompt_embeds,
+
+  976:             # to avoid doing two forward passes
+  977:             if self.do_classifier_free_guidance:
+  978:                 prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
+  979: 
+  980:             prompt_embeds = prompt_embeds.repeat_interleave(repeats=num_frames, dim=0)
+  981: 
+  982:         # 6. Prepare IP-Adapter embeddings
+  983:         if ip_adapter_image is not None or ip_adapter_image_embeds is not None:
+  984:             image_embeds = self.prepare_ip_adapter_image_embeds(
+  985:                 ip_adapter_image,
+  986:                 ip_adapter_image_embeds,
+  987:                 device,
+  988:                 batch_size * num_videos_per_prompt,
+  989:                 self.do_classifier_free_guidance,
+  990:             )
+  991: 
+  992:         # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
+  993:         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
+  994: 
+  995:         # 8. Add image embeds for IP-Adapter
+  996:         added_cond_kwargs = (
+  997:             {"image_embeds": image_embeds}
+  998:             if ip_adapter_image is not None or ip_adapter_image_embeds is not None
+  999:             else None
+ 1000:         )
+ 1001: 
+ 1002:         num_free_init_iters = self._free_init_num_iters if self.free_init_enabled else 1
+
+ 1005:                 latents, timesteps = self._apply_free_init(
+ 1006:                     latents, free_init_iter, num_inference_steps, device, latents.dtype, generator
+ 1007:                 )
+ 1008:                 num_inference_steps = len(timesteps)
+ 1009:                 # make sure to readjust timesteps based on strength
+ 1010:                 timesteps, num_inference_steps = self.get_timesteps(num_inference_steps, timesteps, strength, device)
+ 1011: 
+ 1012:             self._num_timesteps = len(timesteps)
+ 1013:             num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
+ 1014: 
+ 1015:             # 9. Denoising loop
+ 1016:             with self.progress_bar(total=self._num_timesteps) as progress_bar:
+ 1017:                 for i, t in enumerate(timesteps):
+
+ 1019:                         continue
+ 1020: 
+ 1021:                     # expand the latents if we are doing classifier free guidance
+... OUTPUT TRUNCATED ...
+
+
+##########################################################################################
+CLASS: diffusers.pipelines.animatediff.pipeline_animatediff.AnimateDiffPipeline
+FILE: /usr/local/lib/python3.13/dist-packages/diffusers/pipelines/animatediff/pipeline_animatediff.py
+MRO: AnimateDiffPipeline -> DiffusionPipeline -> ConfigMixin -> PushToHubMixin -> StableDiffusionMixin -> TextualInversionLoaderMixin -> IPAdapterMixin -> StableDiffusionLoraLoaderMixin -> LoraBaseMixin -> FreeInitMixin -> AnimateDiffFreeNoiseMixin -> FromSingleFileMixin -> object
+
+--- SIGNATURE: AnimateDiffPipeline.__call__ ---
+(self, prompt: str | list[str] | None = None, num_frames: int | None = 16, height: int | None = None, width: int | None = None, num_inference_steps: int = 50, guidance_scale: float = 7.5, negative_prompt: str | list[str] | None = None, num_videos_per_prompt: int | None = 1, eta: float = 0.0, generator: torch._C.Generator | list[torch._C.Generator] | None = None, latents: torch.Tensor | None = None, prompt_embeds: torch.Tensor | None = None, negative_prompt_embeds: torch.Tensor | None = None, ip_adapter_image: PIL.Image.Image | numpy.ndarray | torch.Tensor | list[PIL.Image.Image] | list[numpy.ndarray] | list[torch.Tensor] | None = None, ip_adapter_image_embeds: list[torch.Tensor] | None = None, output_type: str | None = 'pil', return_dict: bool = True, cross_attention_kwargs: dict[str, typing.Any] | None = None, clip_skip: int | None = None, callback_on_step_end: Optional[Callable[[int, int], NoneType]] = None, callback_on_step_end_tensor_inputs: list[str] = ['latents'], decode_chunk_size: int = 16, **kwargs) -> diffusers.pipelines.animatediff.pipeline_output.AnimateDiffPipelineOutput | tuple
+
+--- SIGNATURE: AnimateDiffPipeline.check_inputs ---
+(self, prompt, height, width, callback_steps, negative_prompt=None, prompt_embeds=None, negative_prompt_embeds=None, ip_adapter_image=None, ip_adapter_image_embeds=None, callback_on_step_end_tensor_inputs=None)
+
+========================= SOURCE: AnimateDiffPipeline.check_inputs =========================
+  449:         negative_prompt=None,
+  450:         prompt_embeds=None,
+  451:         negative_prompt_embeds=None,
+  452:         ip_adapter_image=None,
+  453:         ip_adapter_image_embeds=None,
+  454:         callback_on_step_end_tensor_inputs=None,
+  455:     ):
+  456:         if height % 8 != 0 or width % 8 != 0:
+
+  494:                     f" {negative_prompt_embeds.shape}."
+  495:                 )
+  496: 
+  497:         if ip_adapter_image is not None and ip_adapter_image_embeds is not None:
+  498:             raise ValueError(
+  499:                 "Provide either `ip_adapter_image` or `ip_adapter_image_embeds`. Cannot leave both `ip_adapter_image` and `ip_adapter_image_embeds` defined."
+  500:             )
+  501: 
+  502:         if ip_adapter_image_embeds is not None:
+  503:             if not isinstance(ip_adapter_image_embeds, list):
+  504:                 raise ValueError(
+  505:                     f"`ip_adapter_image_embeds` has to be of type `list` but is {type(ip_adapter_image_embeds)}"
+  506:                 )
+  507:             elif ip_adapter_image_embeds[0].ndim not in [3, 4]:
+  508:                 raise ValueError(
+  509:                     f"`ip_adapter_image_embeds` has to be a list of 3D or 4D tensors but is {ip_adapter_image_embeds[0].ndim}D"
+  510:                 )
+
+
+--- SIGNATURE: AnimateDiffPipeline.prepare_latents ---
+(self, batch_size, num_channels_latents, num_frames, height, width, dtype, device, generator, latents=None)
+
+========================= SOURCE: AnimateDiffPipeline.prepare_latents =========================
+  512:     def prepare_latents(
+  513:         self, batch_size, num_channels_latents, num_frames, height, width, dtype, device, generator, latents=None
+  514:     ):
+  515:         # If FreeNoise is enabled, generate latents as described in Equation (7) of [FreeNoise](https://huggingface.co/papers/2310.15169)
+  516:         if self.free_noise_enabled:
+  517:             latents = self._prepare_latents_free_noise(
+  518:                 batch_size, num_channels_latents, num_frames, height, width, dtype, device, generator, latents
+  519:             )
+  520: 
+  521:         if isinstance(generator, list) and len(generator) != batch_size:
+  522:             raise ValueError(
+  523:                 f"You have passed a list of generators of length {len(generator)}, but requested an effective batch"
+  524:                 f" size of {batch_size}. Make sure the batch size matches the length of the generators."
+  525:             )
+  526: 
+  527:         shape = (
+  528:             batch_size,
+  529:             num_channels_latents,
+  530:             num_frames,
+  531:             height // self.vae_scale_factor,
+  532:             width // self.vae_scale_factor,
+  533:         )
+  534: 
+  535:         if latents is None:
+  536:             latents = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
+  537:         else:
+  538:             latents = latents.to(device)
+  539: 
+  540:         # scale the initial noise by the standard deviation required by the scheduler
+  541:         latents = latents * self.scheduler.init_noise_sigma
+  542:         return latents
+
+
+--- SIGNATURE: AnimateDiffPipeline.prepare_ip_adapter_image_embeds ---
+(self, ip_adapter_image, ip_adapter_image_embeds, device, num_images_per_prompt, do_classifier_free_guidance)
+
+========================= SOURCE: AnimateDiffPipeline.prepare_ip_adapter_image_embeds =========================
+  362:     def prepare_ip_adapter_image_embeds(
+  363:         self, ip_adapter_image, ip_adapter_image_embeds, device, num_images_per_prompt, do_classifier_free_guidance
+  364:     ):
+  365:         image_embeds = []
+  366:         if do_classifier_free_guidance:
+  367:             negative_image_embeds = []
+  368:         if ip_adapter_image_embeds is None:
+  369:             if not isinstance(ip_adapter_image, list):
+  370:                 ip_adapter_image = [ip_adapter_image]
+  371: 
+  372:             if len(ip_adapter_image) != len(self.unet.encoder_hid_proj.image_projection_layers):
+  373:                 raise ValueError(
+  374:                     f"`ip_adapter_image` must have same length as the number of IP Adapters. Got {len(ip_adapter_image)} images and {len(self.unet.encoder_hid_proj.image_projection_layers)} IP Adapters."
+  375:                 )
+  376: 
+  377:             for single_ip_adapter_image, image_proj_layer in zip(
+  378:                 ip_adapter_image, self.unet.encoder_hid_proj.image_projection_layers
+  379:             ):
+  380:                 output_hidden_state = not isinstance(image_proj_layer, ImageProjection)
+  381:                 single_image_embeds, single_negative_image_embeds = self.encode_image(
+  382:                     single_ip_adapter_image, device, 1, output_hidden_state
+  383:                 )
+  384: 
+  385:                 image_embeds.append(single_image_embeds[None, :])
+  386:                 if do_classifier_free_guidance:
+  387:                     negative_image_embeds.append(single_negative_image_embeds[None, :])
+  388:         else:
+  389:             for single_image_embeds in ip_adapter_image_embeds:
+  390:                 if do_classifier_free_guidance:
+  391:                     single_negative_image_embeds, single_image_embeds = single_image_embeds.chunk(2)
+  392:                     negative_image_embeds.append(single_negative_image_embeds)
+  393:                 image_embeds.append(single_image_embeds)
+  394: 
+  395:         ip_adapter_image_embeds = []
+  396:         for i, single_image_embeds in enumerate(image_embeds):
+  397:             single_image_embeds = torch.cat([single_image_embeds] * num_images_per_prompt, dim=0)
+  398:             if do_classifier_free_guidance:
+  399:                 single_negative_image_embeds = torch.cat([negative_image_embeds[i]] * num_images_per_prompt, dim=0)
+  400:                 single_image_embeds = torch.cat([single_negative_image_embeds, single_image_embeds], dim=0)
+  401: 
+  402:             single_image_embeds = single_image_embeds.to(device=device)
+  403:             ip_adapter_image_embeds.append(single_image_embeds)
+  404: 
+  405:         return ip_adapter_image_embeds
+
+
+--- SIGNATURE: AnimateDiffPipeline.encode_image ---
+(self, image, device, num_images_per_prompt, output_hidden_states=None)
+
+========================= SOURCE: AnimateDiffPipeline.encode_image =========================
+  337:     def encode_image(self, image, device, num_images_per_prompt, output_hidden_states=None):
+  338:         dtype = next(self.image_encoder.parameters()).dtype
+  339: 
+  340:         if not isinstance(image, torch.Tensor):
+  341:             image = self.feature_extractor(image, return_tensors="pt").pixel_values
+  342: 
+  343:         image = image.to(device=device, dtype=dtype)
+  344:         if output_hidden_states:
+  345:             image_enc_hidden_states = self.image_encoder(image, output_hidden_states=True).hidden_states[-2]
+  346:             image_enc_hidden_states = image_enc_hidden_states.repeat_interleave(num_images_per_prompt, dim=0)
+  347:             uncond_image_enc_hidden_states = self.image_encoder(
+  348:                 torch.zeros_like(image), output_hidden_states=True
+  349:             ).hidden_states[-2]
+  350:             uncond_image_enc_hidden_states = uncond_image_enc_hidden_states.repeat_interleave(
+  351:                 num_images_per_prompt, dim=0
+  352:             )
+  353:             return image_enc_hidden_states, uncond_image_enc_hidden_states
+  354:         else:
+  355:             image_embeds = self.image_encoder(image).image_embeds
+  356:             image_embeds = image_embeds.repeat_interleave(num_images_per_prompt, dim=0)
+  357:             uncond_image_embeds = torch.zeros_like(image_embeds)
+  358: 
+  359:             return image_embeds, uncond_image_embeds
+
+
+--- SIGNATURE: AnimateDiffPipeline.decode_latents ---
+(self, latents, decode_chunk_size: int = 16)
+
+========================= SOURCE: AnimateDiffPipeline.decode_latents =========================
+  407:     def decode_latents(self, latents, decode_chunk_size: int = 16):
+  408:         latents = 1 / self.vae.config.scaling_factor * latents
+  409: 
+  410:         batch_size, channels, num_frames, height, width = latents.shape
+  411:         latents = latents.permute(0, 2, 1, 3, 4).reshape(batch_size * num_frames, channels, height, width)
+  412: 
+  413:         video = []
+  414:         for i in range(0, latents.shape[0], decode_chunk_size):
+  415:             batch_latents = latents[i : i + decode_chunk_size]
+  416:             batch_latents = self.vae.decode(batch_latents).sample
+  417:             video.append(batch_latents)
+  418: 
+  419:         video = torch.cat(video)
+  420:         video = video[None, :].reshape((batch_size, num_frames, -1) + video.shape[2:]).permute(0, 2, 1, 3, 4)
+  421:         # we always cast to float32 as this does not cause significant overhead and is compatible with bfloat16
+  422:         video = video.float()
+  423:         return video
+
+
+--- SIGNATURE: AnimateDiffPipeline.prepare_extra_step_kwargs ---
+(self, generator, eta)
+
+========================= SOURCE: AnimateDiffPipeline.prepare_extra_step_kwargs =========================
+No matching source lines.
+
+========================= SOURCE: AnimateDiffPipeline.__call__ =========================
+  572:     @replace_example_docstring(EXAMPLE_DOC_STRING)
+  573:     def __call__(
+  574:         self,
+  575:         prompt: str | list[str] | None = None,
+  576:         num_frames: int | None = 16,
+  577:         height: int | None = None,
+  578:         width: int | None = None,
+  579:         num_inference_steps: int = 50,
+  580:         guidance_scale: float = 7.5,
+  581:         negative_prompt: str | list[str] | None = None,
+  582:         num_videos_per_prompt: int | None = 1,
+  583:         eta: float = 0.0,
+  584:         generator: torch.Generator | list[torch.Generator] | None = None,
+  585:         latents: torch.Tensor | None = None,
+  586:         prompt_embeds: torch.Tensor | None = None,
+  587:         negative_prompt_embeds: torch.Tensor | None = None,
+  588:         ip_adapter_image: PipelineImageInput | None = None,
+  589:         ip_adapter_image_embeds: list[torch.Tensor] | None = None,
+  590:         output_type: str | None = "pil",
+  591:         return_dict: bool = True,
+  592:         cross_attention_kwargs: dict[str, Any] | None = None,
+  593:         clip_skip: int | None = None,
+
+  602:         Args:
+  603:             prompt (`str` or `list[str]`, *optional*):
+  604:                 The prompt or prompts to guide image generation. If not defined, you need to pass `prompt_embeds`.
+  605:             height (`int`, *optional*, defaults to `self.unet.config.sample_size * self.vae_scale_factor`):
+  606:                 The height in pixels of the generated video.
+  607:             width (`int`, *optional*, defaults to `self.unet.config.sample_size * self.vae_scale_factor`):
+  608:                 The width in pixels of the generated video.
+  609:             num_frames (`int`, *optional*, defaults to 16):
+  610:                 The number of video frames that are generated. Defaults to 16 frames which at 8 frames per seconds
+  611:                 amounts to 2 seconds of video.
+  612:             num_inference_steps (`int`, *optional*, defaults to 50):
+  613:                 The number of denoising steps. More denoising steps usually lead to a higher quality videos at the
+  614:                 expense of slower inference.
+  615:             guidance_scale (`float`, *optional*, defaults to 7.5):
+  616:                 A higher guidance scale value encourages the model to generate images closely linked to the text
+  617:                 `prompt` at the expense of lower image quality. Guidance scale is enabled when `guidance_scale > 1`.
+  618:             negative_prompt (`str` or `list[str]`, *optional*):
+  619:                 The prompt or prompts to guide what to not include in image generation. If not defined, you need to
+  620:                 pass `negative_prompt_embeds` instead. Ignored when not using guidance (`guidance_scale < 1`).
+  621:             num_videos_per_prompt (`int`, *optional*, defaults to 1):
+  622:                 The number of videos to generate per prompt.
+  623:             eta (`float`, *optional*, defaults to 0.0):
+  624:                 Corresponds to parameter eta (η) from the [DDIM](https://huggingface.co/papers/2010.02502) paper. Only
+  625:                 applies to the [`~schedulers.DDIMScheduler`], and is ignored in other schedulers.
+  626:             generator (`torch.Generator` or `list[torch.Generator]`, *optional*):
+  627:                 A [`torch.Generator`](https://pytorch.org/docs/stable/generated/torch.Generator.html) to make
+  628:                 generation deterministic.
+  629:             latents (`torch.Tensor`, *optional*):
+  630:                 Pre-generated noisy latents sampled from a Gaussian distribution, to be used as inputs for video
+  631:                 generation. Can be used to tweak the same generation with different prompts. If not provided, a latents
+  632:                 tensor is generated by sampling using the supplied random `generator`. Latents should be of shape
+  633:                 `(batch_size, num_channel, num_frames, height, width)`.
+  634:             prompt_embeds (`torch.Tensor`, *optional*):
+  635:                 Pre-generated text embeddings. Can be used to easily tweak text inputs (prompt weighting). If not
+  636:                 provided, text embeddings are generated from the `prompt` input argument.
+  637:             negative_prompt_embeds (`torch.Tensor`, *optional*):
+  638:                 Pre-generated negative text embeddings. Can be used to easily tweak text inputs (prompt weighting). If
+  639:                 not provided, `negative_prompt_embeds` are generated from the `negative_prompt` input argument.
+  640:             ip_adapter_image: (`PipelineImageInput`, *optional*):
+  641:                 Optional image input to work with IP Adapters.
+  642:             ip_adapter_image_embeds (`list[torch.Tensor]`, *optional*):
+  643:                 Pre-generated image embeddings for IP-Adapter. It should be a list of length same as number of
+  644:                 IP-adapters. Each element should be a tensor of shape `(batch_size, num_images, emb_dim)`. It should
+  645:                 contain the negative image embedding if `do_classifier_free_guidance` is set to `True`. If not
+  646:                 provided, embeddings are computed from the `ip_adapter_image` input argument.
+  647:             output_type (`str`, *optional*, defaults to `"pil"`):
+  648:                 The output format of the generated video. Choose between `torch.Tensor`, `PIL.Image` or `np.array`.
+  649:             return_dict (`bool`, *optional*, defaults to `True`):
+  650:                 Whether or not to return a [`~pipelines.text_to_video_synthesis.TextToVideoSDPipelineOutput`] instead
+  651:                 of a plain tuple.
+  652:             cross_attention_kwargs (`dict`, *optional*):
+  653:                 A kwargs dictionary that if specified is passed along to the [`AttentionProcessor`] as defined in
+  654:                 [`self.processor`](https://github.com/huggingface/diffusers/blob/main/src/diffusers/models/attention_processor.py).
+
+  694:         # 0. Default height and width to unet
+  695:         height = height or self.unet.config.sample_size * self.vae_scale_factor
+  696:         width = width or self.unet.config.sample_size * self.vae_scale_factor
+  697: 
+  698:         num_videos_per_prompt = 1
+  699: 
+  700:         # 1. Check inputs. Raise error if not correct
+  701:         self.check_inputs(
+  702:             prompt,
+
+  705:             callback_steps,
+  706:             negative_prompt,
+  707:             prompt_embeds,
+  708:             negative_prompt_embeds,
+  709:             ip_adapter_image,
+  710:             ip_adapter_image_embeds,
+  711:             callback_on_step_end_tensor_inputs,
+  712:         )
+  713: 
+  714:         self._guidance_scale = guidance_scale
+
+  729:         # 3. Encode input prompt
+  730:         text_encoder_lora_scale = (
+  731:             self.cross_attention_kwargs.get("scale", None) if self.cross_attention_kwargs is not None else None
+  732:         )
+  733:         if self.free_noise_enabled:
+  734:             prompt_embeds, negative_prompt_embeds = self._encode_prompt_free_noise(
+  735:                 prompt=prompt,
+  736:                 num_frames=num_frames,
+  737:                 device=device,
+  738:                 num_videos_per_prompt=num_videos_per_prompt,
+  739:                 do_classifier_free_guidance=self.do_classifier_free_guidance,
+  740:                 negative_prompt=negative_prompt,
+  741:                 prompt_embeds=prompt_embeds,
+  742:                 negative_prompt_embeds=negative_prompt_embeds,
+
+  746:         else:
+  747:             prompt_embeds, negative_prompt_embeds = self.encode_prompt(
+  748:                 prompt,
+  749:                 device,
+  750:                 num_videos_per_prompt,
+  751:                 self.do_classifier_free_guidance,
+  752:                 negative_prompt,
+  753:                 prompt_embeds=prompt_embeds,
+  754:                 negative_prompt_embeds=negative_prompt_embeds,
+
+  761:             # to avoid doing two forward passes
+  762:             if self.do_classifier_free_guidance:
+  763:                 prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
+  764: 
+  765:             prompt_embeds = prompt_embeds.repeat_interleave(repeats=num_frames, dim=0)
+  766: 
+  767:         if ip_adapter_image is not None or ip_adapter_image_embeds is not None:
+  768:             image_embeds = self.prepare_ip_adapter_image_embeds(
+  769:                 ip_adapter_image,
+  770:                 ip_adapter_image_embeds,
+  771:                 device,
+  772:                 batch_size * num_videos_per_prompt,
+  773:                 self.do_classifier_free_guidance,
+  774:             )
+  775: 
+  776:         # 4. Prepare timesteps
+  777:         self.scheduler.set_timesteps(num_inference_steps, device=device)
+  778:         timesteps = self.scheduler.timesteps
+  779: 
+  780:         # 5. Prepare latent variables
+  781:         num_channels_latents = self.unet.config.in_channels
+  782:         latents = self.prepare_latents(
+  783:             batch_size * num_videos_per_prompt,
+  784:             num_channels_latents,
+  785:             num_frames,
+  786:             height,
+  787:             width,
+  788:             prompt_embeds.dtype,
+  789:             device,
+
+  795:         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
+  796: 
+  797:         # 7. Add image embeds for IP-Adapter
+  798:         added_cond_kwargs = (
+  799:             {"image_embeds": image_embeds}
+  800:             if ip_adapter_image is not None or ip_adapter_image_embeds is not None
+  801:             else None
+  802:         )
+  803: 
+  804:         num_free_init_iters = self._free_init_num_iters if self.free_init_enabled else 1
+
+  808:                     latents, free_init_iter, num_inference_steps, device, latents.dtype, generator
+  809:                 )
+  810: 
+  811:             self._num_timesteps = len(timesteps)
+  812:             num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
+  813: 
+  814:             # 8. Denoising loop
+  815:             with self.progress_bar(total=self._num_timesteps) as progress_bar:
+  816:                 for i, t in enumerate(timesteps):
+
+  818:                         continue
+  819: 
+  820:                     # expand the latents if we are doing classifier free guidance
+  821:                     latent_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
+  822:                     latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
+  823: 
+  824:                     # predict the noise residual
+  825:                     noise_pred = self.unet(
+  826:                         latent_model_input,
+  827:                         t,
+  828:                         encoder_hidden_states=prompt_embeds,
+  829:                         cross_attention_kwargs=cross_attention_kwargs,
+
+  831:                     ).sample
+  832: 
+  833:                     # perform guidance
+  834:                     if self.do_classifier_free_guidance:
+  835:                         noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+  836:                         noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+  837: 
+  838:                     # compute the previous noisy sample x_t -> x_t-1
+  839:                     latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+  840: 
+  841:                     if callback_on_step_end is not None:
+  842:                         callback_kwargs = {}
+  843:                         for k in callback_on_step_end_tensor_inputs:
+
+  848:                         prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
+  849:                         negative_prompt_embeds = callback_outputs.pop("negative_prompt_embeds", negative_prompt_embeds)
+  850: 
+  851:                     # call the callback, if provided
+  852:                     if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
+  853:                         progress_bar.update()
+  854:                         if callback is not None and i % callback_steps == 0:
+  855:                             callback(i, t, latents)
+  856: 
+
+  858:                         xm.mark_step()
+  859: 
+  860:         # 9. Post processing
+  861:         if output_type == "latent":
+  862:             video = latents
+  863:         else:
+  864:             video_tensor = self.decode_latents(latents, decode_chunk_size)
+  865:             video = self.video_processor.postprocess_video(video=video_tensor, output_type=output_type)
+  866: 
+  867:         # 10. Offload all models
+  868:         self.maybe_free_model_hooks()
+  869: 
+  870:         if not return_dict:
+  871:             return (video,)
+  872: 
+  873:         return AnimateDiffPipelineOutput(frames=video)
+
+
+
+==========================================================================================
+IP-ADAPTER / MIXIN IMPLEMENTATION
+==========================================================================================
+
+MODULE: diffusers.loaders.ip_adapter /usr/local/lib/python3.13/dist-packages/diffusers/loaders/ip_adapter.py
+
+--- SIGNATURE: IPAdapterMixin.load_ip_adapter ---
+(self, pretrained_model_name_or_path_or_dict: str | list[str] | dict[str, torch.Tensor], subfolder: str | list[str], weight_name: str | list[str], image_encoder_folder: str | None = 'image_encoder', **kwargs)
+
+========================= SOURCE: IPAdapterMixin.load_ip_adapter =========================
+   58:     @validate_hf_hub_args
+   59:     def load_ip_adapter(
+   60:         self,
+   61:         pretrained_model_name_or_path_or_dict: str | list[str] | dict[str, torch.Tensor],
+   62:         subfolder: str | list[str],
+   63:         weight_name: str | list[str],
+   64:         image_encoder_folder: str | None = "image_encoder",
+   65:         **kwargs,
+   66:     ):
+   67:         """
+   68:         Parameters:
+
+   80:                 list is passed, it should have the same length as `weight_name`.
+   81:             weight_name (`str` or `list[str]`):
+   82:                 The name of the weight file to load. If a list is passed, it should have the same length as
+   83:                 `subfolder`.
+   84:             image_encoder_folder (`str`, *optional*, defaults to `image_encoder`):
+   85:                 The subfolder location of the image encoder within a larger model repository on the Hub or locally.
+   86:                 Pass `None` to not load the image encoder. If the image encoder is located in a folder inside
+   87:                 `subfolder`, you only need to pass the name of the folder that contains image encoder weights, e.g.
+   88:                 `image_encoder_folder="image_encoder"`. If the image encoder is located in a folder other than
+   89:                 `subfolder`, you should pass the path to the folder that contains image encoder weights, for example,
+   90:                 `image_encoder_folder="different_subfolder/image_encoder"`.
+   91:             cache_dir (`str | os.PathLike`, *optional*):
+   92:                 Path to a directory where a downloaded pretrained model configuration is cached if the standard cache
+   93:                 is not used.
+   94:             force_download (`bool`, *optional*, defaults to `False`):
+
+  113:                 Only supported for PyTorch >= 1.9.0. If you are using an older version of PyTorch, setting this
+  114:                 argument to `True` will raise an error.
+  115:         """
+  116: 
+  117:         # handle the list inputs for multiple IP Adapters
+  118:         if not isinstance(weight_name, list):
+  119:             weight_name = [weight_name]
+  120: 
+  121:         if not isinstance(pretrained_model_name_or_path_or_dict, list):
+
+  176:                     subfolder=subfolder,
+  177:                     user_agent=user_agent,
+  178:                 )
+  179:                 if weight_name.endswith(".safetensors"):
+  180:                     state_dict = {"image_proj": {}, "ip_adapter": {}}
+  181:                     with safe_open(model_file, framework="pt", device="cpu") as f:
+  182:                         for key in f.keys():
+  183:                             if key.startswith("image_proj."):
+  184:                                 state_dict["image_proj"][key.replace("image_proj.", "")] = f.get_tensor(key)
+  185:                             elif key.startswith("ip_adapter."):
+  186:                                 state_dict["ip_adapter"][key.replace("ip_adapter.", "")] = f.get_tensor(key)
+  187:                 else:
+  188:                     state_dict = load_state_dict(model_file)
+  189:             else:
+  190:                 state_dict = pretrained_model_name_or_path_or_dict
+  191: 
+  192:             keys = list(state_dict.keys())
+  193:             if "image_proj" not in keys and "ip_adapter" not in keys:
+  194:                 raise ValueError("Required keys are (`image_proj` and `ip_adapter`) missing from the state dict.")
+  195: 
+  196:             state_dicts.append(state_dict)
+  197: 
+  198:             # load CLIP image encoder here if it has not been registered to the pipeline yet
+  199:             if hasattr(self, "image_encoder") and getattr(self, "image_encoder", None) is None:
+  200:                 if image_encoder_folder is not None:
+  201:                     if not isinstance(pretrained_model_name_or_path_or_dict, dict):
+  202:                         logger.info(f"loading image_encoder from {pretrained_model_name_or_path_or_dict}")
+  203:                         if image_encoder_folder.count("/") == 0:
+  204:                             image_encoder_subfolder = Path(subfolder, image_encoder_folder).as_posix()
+  205:                         else:
+  206:                             image_encoder_subfolder = Path(image_encoder_folder).as_posix()
+  207: 
+  208:                         # transformers renamed `torch_dtype` to `dtype` in 4.56.0.
+  209:                         dtype_kwarg = (
+  210:                             {"dtype": self.dtype}
+  211:                             if is_transformers_version(">=", "4.56.0")
+  212:                             else {"torch_dtype": self.dtype}
+  213:                         )
+  214:                         image_encoder = CLIPVisionModelWithProjection.from_pretrained(
+  215:                             pretrained_model_name_or_path_or_dict,
+  216:                             subfolder=image_encoder_subfolder,
+  217:                             low_cpu_mem_usage=low_cpu_mem_usage,
+  218:                             cache_dir=cache_dir,
+  219:                             local_files_only=local_files_only,
+  220:                             **dtype_kwarg,
+  221:                         ).to(self.device)
+  222:                         self.register_modules(image_encoder=image_encoder)
+  223:                     else:
+  224:                         raise ValueError(
+  225:                             "`image_encoder` cannot be loaded because `pretrained_model_name_or_path_or_dict` is a state dict."
+  226:                         )
+  227:                 else:
+  228:                     logger.warning(
+  229:                         "image_encoder is not loaded since `image_encoder_folder=None` passed. You will not be able to use `ip_adapter_image` when calling the pipeline with IP-Adapter."
+  230:                         "Use `ip_adapter_image_embeds` to pass pre-generated image embedding instead."
+  231:                     )
+  232: 
+  233:             # create feature extractor if it has not been registered to the pipeline yet
+  234:             if hasattr(self, "feature_extractor") and getattr(self, "feature_extractor", None) is None:
+  235:                 # FaceID IP adapters don't need the image encoder so it's not present, in this case we default to 224
+  236:                 default_clip_size = 224
+  237:                 clip_image_size = (
+  238:                     self.image_encoder.config.image_size if self.image_encoder is not None else default_clip_size
+  239:                 )
+  240:                 feature_extractor = CLIPImageProcessor(size=clip_image_size, crop_size=clip_image_size)
+  241:                 self.register_modules(feature_extractor=feature_extractor)
+  242: 
+  243:         # load ip-adapter into unet
+  244:         unet = getattr(self, self.unet_name) if not hasattr(self, "unet") else self.unet
+  245:         unet._load_ip_adapter_weights(state_dicts, low_cpu_mem_usage=low_cpu_mem_usage)
+  246: 
+  247:         extra_loras = unet._load_ip_adapter_loras(state_dicts)
+  248:         if extra_loras != {}:
+  249:             if not USE_PEFT_BACKEND:
+  250:                 logger.warning("PEFT backend is required to load these weights.")
+  251:             else:
+  252:                 # apply the IP Adapter Face ID LoRA weights
+  253:                 peft_config = getattr(unet, "peft_config", {})
+  254:                 for k, lora in extra_loras.items():
+  255:                     if f"faceid_{k}" not in peft_config:
+  256:                         self.load_lora_weights(lora, adapter_name=f"faceid_{k}")
+  257:                         self.set_adapters([f"faceid_{k}"], adapter_weights=[1.0])
+
+
+--- SIGNATURE: IPAdapterMixin.set_ip_adapter_scale ---
+(self, scale)
+
+========================= SOURCE: IPAdapterMixin.set_ip_adapter_scale =========================
+  259:     def set_ip_adapter_scale(self, scale):
+  260:         """
+  261:         Set IP-Adapter scales per-transformer block. Input `scale` could be a single config or a list of configs for
+  262:         granular control over each IP-Adapter behavior. A config can be a float or a dictionary.
+  263: 
+  264:         Example:
+  265: 
+  266:         ```py
+  267:         # To use original IP-Adapter
+  268:         scale = 1.0
+  269:         pipeline.set_ip_adapter_scale(scale)
+  270: 
+  271:         # To use style block only
+  272:         scale = {
+  273:             "up": {"block_0": [0.0, 1.0, 0.0]},
+  274:         }
+  275:         pipeline.set_ip_adapter_scale(scale)
+  276: 
+  277:         # To use style+layout blocks
+  278:         scale = {
+  279:             "down": {"block_2": [0.0, 1.0]},
+  280:             "up": {"block_0": [0.0, 1.0, 0.0]},
+  281:         }
+  282:         pipeline.set_ip_adapter_scale(scale)
+  283: 
+  284:         # To use style and layout from 2 reference images
+  285:         scales = [{"down": {"block_2": [0.0, 1.0]}}, {"up": {"block_0": [0.0, 1.0, 0.0]}}]
+  286:         pipeline.set_ip_adapter_scale(scales)
+  287:         ```
+  288:         """
+  289:         unet = getattr(self, self.unet_name) if not hasattr(self, "unet") else self.unet
+  290:         if not isinstance(scale, list):
+  291:             scale = [scale]
+  292:         scale_configs = _maybe_expand_lora_scales(unet, scale, default_scale=0.0)
+  293: 
+  294:         for attn_name, attn_processor in unet.attn_processors.items():
+  295:             if isinstance(
+  296:                 attn_processor, (IPAdapterAttnProcessor, IPAdapterAttnProcessor2_0, IPAdapterXFormersAttnProcessor)
+  297:             ):
+  298:                 if len(scale_configs) != len(attn_processor.scale):
+  299:                     raise ValueError(
+  300:                         f"Cannot assign {len(scale_configs)} scale_configs to {len(attn_processor.scale)} IP-Adapter."
+  301:                     )
+  302:                 elif len(scale_configs) == 1:
+  303:                     scale_configs = scale_configs * len(attn_processor.scale)
+  304:                 for i, scale_config in enumerate(scale_configs):
+  305:                     if isinstance(scale_config, dict):
+  306:                         for k, s in scale_config.items():
+  307:                             if attn_name.startswith(k):
+  308:                                 attn_processor.scale[i] = s
+  309:                     else:
+  310:                         attn_processor.scale[i] = scale_config
+
+
+MODULE: diffusers.loaders /usr/local/lib/python3.13/dist-packages/diffusers/loaders/__init__.py
+
+--- SIGNATURE: IPAdapterMixin.load_ip_adapter ---
+(self, pretrained_model_name_or_path_or_dict: str | list[str] | dict[str, torch.Tensor], subfolder: str | list[str], weight_name: str | list[str], image_encoder_folder: str | None = 'image_encoder', **kwargs)
+
+========================= SOURCE: IPAdapterMixin.load_ip_adapter =========================
+   58:     @validate_hf_hub_args
+   59:     def load_ip_adapter(
+   60:         self,
+   61:         pretrained_model_name_or_path_or_dict: str | list[str] | dict[str, torch.Tensor],
+   62:         subfolder: str | list[str],
+   63:         weight_name: str | list[str],
+   64:         image_encoder_folder: str | None = "image_encoder",
+   65:         **kwargs,
+   66:     ):
+   67:         """
+   68:         Parameters:
+
+   80:                 list is passed, it should have the same length as `weight_name`.
+   81:             weight_name (`str` or `list[str]`):
+   82:                 The name of the weight file to load. If a list is passed, it should have the same length as
+   83:                 `subfolder`.
+   84:             image_encoder_folder (`str`, *optional*, defaults to `image_encoder`):
+   85:                 The subfolder location of the image encoder within a larger model repository on the Hub or locally.
+   86:                 Pass `None` to not load the image encoder. If the image encoder is located in a folder inside
+   87:                 `subfolder`, you only need to pass the name of the folder that contains image encoder weights, e.g.
+   88:                 `image_encoder_folder="image_encoder"`. If the image encoder is located in a folder other than
+   89:                 `subfolder`, you should pass the path to the folder that contains image encoder weights, for example,
+   90:                 `image_encoder_folder="different_subfolder/image_encoder"`.
+   91:             cache_dir (`str | os.PathLike`, *optional*):
+   92:                 Path to a directory where a downloaded pretrained model configuration is cached if the standard cache
+   93:                 is not used.
+   94:             force_download (`bool`, *optional*, defaults to `False`):
+
+  113:                 Only supported for PyTorch >= 1.9.0. If you are using an older version of PyTorch, setting this
+  114:                 argument to `True` will raise an error.
+  115:         """
+  116: 
+  117:         # handle the list inputs for multiple IP Adapters
+  118:         if not isinstance(weight_name, list):
+  119:             weight_name = [weight_name]
+  120: 
+  121:         if not isinstance(pretrained_model_name_or_path_or_dict, list):
+
+  176:                     subfolder=subfolder,
+  177:                     user_agent=user_agent,
+  178:                 )
+  179:                 if weight_name.endswith(".safetensors"):
+  180:                     state_dict = {"image_proj": {}, "ip_adapter": {}}
+  181:                     with safe_open(model_file, framework="pt", device="cpu") as f:
+  182:                         for key in f.keys():
+  183:                             if key.startswith("image_proj."):
+  184:                                 state_dict["image_proj"][key.replace("image_proj.", "")] = f.get_tensor(key)
+  185:                             elif key.startswith("ip_adapter."):
+  186:                                 state_dict["ip_adapter"][key.replace("ip_adapter.", "")] = f.get_tensor(key)
+  187:                 else:
+  188:                     state_dict = load_state_dict(model_file)
+  189:             else:
+  190:                 state_dict = pretrained_model_name_or_path_or_dict
+  191: 
+  192:             keys = list(state_dict.keys())
+  193:             if "image_proj" not in keys and "ip_adapter" not in keys:
+  194:                 raise ValueError("Required keys are (`image_proj` and `ip_adapter`) missing from the state dict.")
+  195: 
+  196:             state_dicts.append(state_dict)
+  197: 
+  198:             # load CLIP image encoder here if it has not been registered to the pipeline yet
+  199:             if hasattr(self, "image_encoder") and getattr(self, "image_encoder", None) is None:
+  200:                 if image_encoder_folder is not None:
+  201:                     if not isinstance(pretrained_model_name_or_path_or_dict, dict):
+  202:                         logger.info(f"loading image_encoder from {pretrained_model_name_or_path_or_dict}")
+  203:                         if image_encoder_folder.count("/") == 0:
+  204:                             image_encoder_subfolder = Path(subfolder, image_encoder_folder).as_posix()
+  205:                         else:
+  206:                             image_encoder_subfolder = Path(image_encoder_folder).as_posix()
+  207: 
+  208:                         # transformers renamed `torch_dtype` to `dtype` in 4.56.0.
+  209:                         dtype_kwarg = (
+  210:                             {"dtype": self.dtype}
+  211:                             if is_transformers_version(">=", "4.56.0")
+  212:                             else {"torch_dtype": self.dtype}
+  213:                         )
+  214:                         image_encoder = CLIPVisionModelWithProjection.from_pretrained(
+  215:                             pretrained_model_name_or_path_or_dict,
+  216:                             subfolder=image_encoder_subfolder,
+  217:                             low_cpu_mem_usage=low_cpu_mem_usage,
+  218:                             cache_dir=cache_dir,
+  219:                             local_files_only=local_files_only,
+  220:                             **dtype_kwarg,
+  221:                         ).to(self.device)
+  222:                         self.register_modules(image_encoder=image_encoder)
+  223:                     else:
+  224:                         raise ValueError(
+  225:                             "`image_encoder` cannot be loaded because `pretrained_model_name_or_path_or_dict` is a state dict."
+  226:                         )
+  227:                 else:
+  228:                     logger.warning(
+  229:                         "image_encoder is not loaded since `image_encoder_folder=None` passed. You will not be able to use `ip_adapter_image` when calling the pipeline with IP-Adapter."
+  230:                         "Use `ip_adapter_image_embeds` to pass pre-generated image embedding instead."
+  231:                     )
+  232: 
+  233:             # create feature extractor if it has not been registered to the pipeline yet
+  234:             if hasattr(self, "feature_extractor") and getattr(self, "feature_extractor", None) is None:
+  235:                 # FaceID IP adapters don't need the image encoder so it's not present, in this case we default to 224
+  236:                 default_clip_size = 224
+  237:                 clip_image_size = (
+  238:                     self.image_encoder.config.image_size if self.image_encoder is not None else default_clip_size
+  239:                 )
+  240:                 feature_extractor = CLIPImageProcessor(size=clip_image_size, crop_size=clip_image_size)
+  241:                 self.register_modules(feature_extractor=feature_extractor)
+  242: 
+  243:         # load ip-adapter into unet
+  244:         unet = getattr(self, self.unet_name) if not hasattr(self, "unet") else self.unet
+  245:         unet._load_ip_adapter_weights(state_dicts, low_cpu_mem_usage=low_cpu_mem_usage)
+  246: 
+  247:         extra_loras = unet._load_ip_adapter_loras(state_dicts)
+  248:         if extra_loras != {}:
+  249:             if not USE_PEFT_BACKEND:
+  250:                 logger.warning("PEFT backend is required to load these weights.")
+  251:             else:
+  252:                 # apply the IP Adapter Face ID LoRA weights
+  253:                 peft_config = getattr(unet, "peft_config", {})
+  254:                 for k, lora in extra_loras.items():
+  255:                     if f"faceid_{k}" not in peft_config:
+  256:                         self.load_lora_weights(lora, adapter_name=f"faceid_{k}")
+  257:                         self.set_adapters([f"faceid_{k}"], adapter_weights=[1.0])
+
+
+--- SIGNATURE: IPAdapterMixin.set_ip_adapter_scale ---
+(self, scale)
+
+========================= SOURCE: IPAdapterMixin.set_ip_adapter_scale =========================
+  259:     def set_ip_adapter_scale(self, scale):
+  260:         """
+  261:         Set IP-Adapter scales per-transformer block. Input `scale` could be a single config or a list of configs for
+  262:         granular control over each IP-Adapter behavior. A config can be a float or a dictionary.
+  263: 
+  264:         Example:
+  265: 
+  266:         ```py
+  267:         # To use original IP-Adapter
+  268:         scale = 1.0
+  269:         pipeline.set_ip_adapter_scale(scale)
+  270: 
+  271:         # To use style block only
+  272:         scale = {
+  273:             "up": {"block_0": [0.0, 1.0, 0.0]},
+  274:         }
+  275:         pipeline.set_ip_adapter_scale(scale)
+  276: 
+  277:         # To use style+layout blocks
+  278:         scale = {
+  279:             "down": {"block_2": [0.0, 1.0]},
+  280:             "up": {"block_0": [0.0, 1.0, 0.0]},
+  281:         }
+  282:         pipeline.set_ip_adapter_scale(scale)
+  283: 
+  284:         # To use style and layout from 2 reference images
+  285:         scales = [{"down": {"block_2": [0.0, 1.0]}}, {"up": {"block_0": [0.0, 1.0, 0.0]}}]
+  286:         pipeline.set_ip_adapter_scale(scales)
+  287:         ```
+  288:         """
+  289:         unet = getattr(self, self.unet_name) if not hasattr(self, "unet") else self.unet
+  290:         if not isinstance(scale, list):
+  291:             scale = [scale]
+  292:         scale_configs = _maybe_expand_lora_scales(unet, scale, default_scale=0.0)
+  293: 
+  294:         for attn_name, attn_processor in unet.attn_processors.items():
+  295:             if isinstance(
+  296:                 attn_processor, (IPAdapterAttnProcessor, IPAdapterAttnProcessor2_0, IPAdapterXFormersAttnProcessor)
+  297:             ):
+  298:                 if len(scale_configs) != len(attn_processor.scale):
+  299:                     raise ValueError(
+  300:                         f"Cannot assign {len(scale_configs)} scale_configs to {len(attn_processor.scale)} IP-Adapter."
+  301:                     )
+  302:                 elif len(scale_configs) == 1:
+  303:                     scale_configs = scale_configs * len(attn_processor.scale)
+  304:                 for i, scale_config in enumerate(scale_configs):
+  305:                     if isinstance(scale_config, dict):
+  306:                         for k, s in scale_config.items():
+  307:                             if attn_name.startswith(k):
+  308:                                 attn_processor.scale[i] = s
+  309:                     else:
+  310:                         attn_processor.scale[i] = scale_config
+
+
+==========================================================================================
+AUDIT COMPLETE — NO INFERENCE WAS RUN
+==========================================================================================
