@@ -1,0 +1,26 @@
+{
+  "test": "V3.2.4 AnimateDiff conditioning experiment",
+  "started_utc": "2026-11-13T16:51:49.158653+00:00",
+  "source_image": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/scene_01.png",
+  "source_size": [
+    512,
+    512
+  ],
+  "motion_adapter": "guoyww/animatediff-motion-adapter-v1-5-2",
+  "base_model": "runwayml/stable-diffusion-v1-5",
+  "ip_adapter": "h94/IP-Adapter",
+  "frames_requested": 16,
+  "frames_generated": 16,
+  "num_inference_steps": 24,
+  "enforce_inference_steps": true,
+  "strength": 0.25,
+  "ip_adapter_scale": 1.0,
+  "guidance_scale": 7.0,
+  "seed": 12345,
+  "generation_seconds": 84.08,
+  "total_elapsed_seconds": 100.69,
+  "first_frame": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/v3_2_4_conditioning_test/preview_first_frame.png",
+  "contact_sheet": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/v3_2_4_conditioning_test/preview_contact_sheet.png",
+  "frames_directory": "/kaggle/working/video_temp/24ff3170-e97d-4e8e-af71-c76ec314ecbc/v3_2_4_conditioning_test/preview_frames",
+  "visual_approval": "PENDING"
+}
