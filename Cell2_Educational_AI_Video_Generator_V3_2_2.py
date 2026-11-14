@@ -146,7 +146,7 @@ log("Cell 1 verified. Cell 2 dependencies ready.")
 # 2. CONFIGURATION
 # =====================================================================
 
-APP_VERSION = "3.2.2"
+APP_VERSION = "3.2.3"
 
 # A new value on each cell execution.
 # This prevents reusing a server running older source code.
@@ -196,8 +196,35 @@ NEGATIVE_PROMPT = (
     "black image, blank image, empty scene, blurry, low quality, "
     "distorted objects, malformed anatomy, incorrect anatomy, "
     "unrelated objects, text, labels, watermark, logo, "
-    "poor composition, low contrast"
+    "poor composition, low contrast, collage, diptych, triptych, "
+    "split screen, multiple panels, duplicate subjects, side by side "
+    "comparison, cropped main subject, cut off anatomy, gibberish text, "
+    "misspelled labels, typography, diagram labels, borders, frames"
 )
+
+OPENING_SCENE_MARKER = "OPENING_SCENE_SINGLE_SUBJECT_COMPOSITION"
+
+def build_scene_visual_prompt(scene_index, subject, visual_prompt):
+    """Apply a strict single-subject composition to the opening shot only."""
+    prompt = re.sub(r"\\s+", " ", str(visual_prompt or "")).strip()
+    if int(scene_index) != 1 or OPENING_SCENE_MARKER in prompt:
+        return prompt
+
+    subject = re.sub(r"\\s+", " ", str(subject or "main educational subject")).strip()
+    return (
+        f"{OPENING_SCENE_MARKER}. ONE SINGLE {subject.upper()} ONLY. "
+        "Create one complete, unmistakable main subject as one unified object. "
+        "Place it large, centered, fully inside the frame, with clear space "
+        "around every edge. Use one continuous full-frame composition and "
+        "one simple uncluttered background. Premium educational 3D "
+        "documentary illustration, accurate recognizable structure, clear "
+        "silhouette, controlled soft studio lighting. This is an opening "
+        "hero shot, NOT an infographic. "
+        "Do not show multiple versions, duplicates, comparison views, "
+        "collages, panels, split screens, borders, inset pictures, diagrams, "
+        "arrows, labels, letters, numbers, captions or watermarks. "
+        + prompt
+    )
 
 VOICE_OPTIONS = {
     "ar": {
@@ -1210,6 +1237,9 @@ def generate_animated_scene(visual_prompt, subject, output_path, seed, task_id, 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    visual_prompt = build_scene_visual_prompt(
+        scene_index, subject, visual_prompt
+    )
     animation_pipe = load_animation_pipeline()
     fitted_prompt, token_count = fit_clip_prompt(
         visual_prompt,
@@ -1340,13 +1370,26 @@ def generate_animated_scene(visual_prompt, subject, output_path, seed, task_id, 
 # 8. DREAMSHAPER IMAGE GENERATION
 # =====================================================================
 
-def generate_scene_image(visual_prompt, output_path, seed):
+def generate_scene_image(
+    visual_prompt, output_path, seed, scene_index=0, subject=""
+):
 
     output_path = Path(output_path)
+
+    if int(scene_index) == 1:
+        visual_prompt = build_scene_visual_prompt(
+            scene_index, subject, visual_prompt
+        )
+        priority_subject = (
+            f"one single complete {subject}, centered, fully visible"
+        )
+    else:
+        priority_subject = subject
 
     image_tokenizer = getattr(pipe, "tokenizer", None)
     visual_prompt, clip_tokens = fit_clip_prompt(
         visual_prompt,
+        subject=priority_subject,
         tokenizer=image_tokenizer,
         limit=77
     )
@@ -1417,7 +1460,8 @@ def generate_scene_image(visual_prompt, output_path, seed):
 def inspect_image_relevance(
     image_path,
     narration,
-    expected_subject
+    expected_subject,
+    scene_index=0
 ):
 
     image_path = Path(image_path)
@@ -1458,6 +1502,24 @@ Return ONLY JSON:
 
 Set relevant=false if the main subject is missing,
 unrecognizable or clearly unrelated.
+
+For the opening scene (scene_index=1), also evaluate composition:
+- exactly ONE main subject, not several versions of it;
+- one continuous full-frame image, not a collage or multi-panel layout;
+- the complete main subject is inside the image, not cut off;
+- no gibberish, pseudo-letters, fake labels or accidental typography.
+
+Return "composition_ok": true only if ALL four opening-scene
+composition requirements pass. Otherwise return false and explain
+the defect in "reason". For other scenes set composition_ok=true.
+
+Return JSON with these fields:
+{
+  "relevant": true,
+  "composition_ok": true,
+  "observed_subject": "What is actually visible",
+  "reason": "Short explanation"
+}
 """
 
     last_error = None
@@ -1519,14 +1581,28 @@ unrecognizable or clearly unrelated.
                     "Gemma did not return a boolean relevance decision."
                 )
 
+            composition_ok = result.get("composition_ok")
+            if int(scene_index) == 1 and not isinstance(composition_ok, bool):
+                raise RuntimeError(
+                    "Opening-scene inspection omitted the required "
+                    "composition_ok boolean."
+                )
+            if int(scene_index) != 1:
+                composition_ok = True
+
+            reason = str(result.get("reason", ""))
+            if int(scene_index) == 1 and not composition_ok:
+                reason = (
+                    "Opening-scene composition rejected: " + reason
+                )
+
             return {
-                "relevant": result["relevant"],
+                "relevant": bool(result["relevant"] and composition_ok),
+                "composition_ok": composition_ok,
                 "observed_subject": str(
                     result.get("observed_subject", "")
                 ),
-                "reason": str(
-                    result.get("reason", "")
-                )
+                "reason": reason
             }
 
         except Exception as exc:
@@ -1576,7 +1652,9 @@ def generate_and_verify_image(
         generate_scene_image(
             current_prompt,
             output_path,
-            seed + attempt * 997
+            seed + attempt * 997,
+            scene_index=scene_index,
+            subject=expected_subject
         )
 
         task_log(
@@ -1587,7 +1665,8 @@ def generate_and_verify_image(
         inspection = inspect_image_relevance(
             output_path,
             narration,
-            expected_subject
+            expected_subject,
+            scene_index=scene_index
         )
 
         task_log(
@@ -2234,7 +2313,8 @@ def _process_video_task(task_id, request_data):
             animation_inspection = inspect_image_relevance(
                 animation_result["first_frame_path"],
                 narration,
-                subject
+                subject,
+                scene_index=index
             )
             if not animation_inspection.get("relevant"):
                 raise RuntimeError(
@@ -2898,7 +2978,7 @@ if health_data.get("build_id") != APP_BUILD_ID:
     raise RuntimeError("Server build ID does not match this cell.")
 
 print("\n" + "=" * 72)
-print("EDUCATIONAL AI VIDEO GENERATOR V3.2.2")
+print("EDUCATIONAL AI VIDEO GENERATOR V3.2.3")
 print("=" * 72)
 
 print("Version:", APP_VERSION)
@@ -2947,7 +3027,7 @@ print(
 )
 
 log(
-    "Educational AI Video Generator V3.2.2 initialized. "
+    "Educational AI Video Generator V3.2.3 initialized. "
     "Local health check passed."
 )
 
