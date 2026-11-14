@@ -206,11 +206,11 @@ OPENING_SCENE_MARKER = "OPENING_SCENE_SINGLE_SUBJECT_COMPOSITION"
 
 def build_scene_visual_prompt(scene_index, subject, visual_prompt):
     """Apply a strict single-subject composition to the opening shot only."""
-    prompt = re.sub(r"\\s+", " ", str(visual_prompt or "")).strip()
+    prompt = re.sub(r"\s+", " ", str(visual_prompt or "")).strip()
     if int(scene_index) != 1 or OPENING_SCENE_MARKER in prompt:
         return prompt
 
-    subject = re.sub(r"\\s+", " ", str(subject or "main educational subject")).strip()
+    subject = re.sub(r"\s+", " ", str(subject or "main educational subject")).strip()
     return (
         f"{OPENING_SCENE_MARKER}. ONE SINGLE {subject.upper()} ONLY. "
         "Create one complete, unmistakable main subject as one unified object. "
@@ -1514,12 +1514,12 @@ composition requirements pass. Otherwise return false and explain
 the defect in "reason". For other scenes set composition_ok=true.
 
 Return JSON with these fields:
-{
+{{
   "relevant": true,
   "composition_ok": true,
   "observed_subject": "What is actually visible",
   "reason": "Short explanation"
-}
+}}
 """
 
     last_error = None
