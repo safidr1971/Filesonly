@@ -1492,10 +1492,11 @@ subject and is suitable for this exact narration.
 Do not approve a generic image merely because it relates
 to the general topic.
 
-Return ONLY JSON:
+Return ONLY JSON with these fields:
 
 {{
   "relevant": true,
+  "composition_ok": true,
   "observed_subject": "What is actually visible",
   "reason": "Short explanation"
 }}
