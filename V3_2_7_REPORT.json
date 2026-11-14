@@ -1,0 +1,52 @@
+{
+    "version": "3.2.7",
+    "test": "ANIMATEDIFF MOTION INCREASE TEST",
+    "started_at": "2026-11-14T09:18:19",
+    "completed_at": "2026-11-14T09:19:31",
+    "source_image": "/kaggle/working/video_temp/c94dd877-5d79-4ae2-9d7d-c4c441bd182f/scene_01.png",
+    "models": {
+        "base": "runwayml/stable-diffusion-v1-5",
+        "motion_adapter": "guoyww/animatediff-motion-adapter-v1-5-2",
+        "ip_adapter": "h94/IP-Adapter"
+    },
+    "configuration": {
+        "frames": 8,
+        "input_resolution": [
+            384,
+            384
+        ],
+        "output_resolution": [
+            512,
+            512
+        ],
+        "steps": 24,
+        "guidance_scale": 7.0,
+        "seed": 12345,
+        "ip_adapter_scale": 1.0,
+        "strength": 0.5
+    },
+    "metrics": {
+        "average_motion_difference": 10.904876436506,
+        "maximum_motion_difference": 13.021644592285156,
+        "minimum_motion_difference": 10.028409004211426,
+        "average_source_difference": 15.338768124580383,
+        "unique_frames": 8
+    },
+    "generation_seconds": 31.938074827194214,
+    "total_elapsed_seconds": 72.18433594703674,
+    "validation": {
+        "correct_frame_count": true,
+        "unique_frames": true,
+        "correct_resolution": true,
+        "motion_detected": true,
+        "contact_sheet_created": true,
+        "gif_created": true
+    },
+    "overall_status": "PASS",
+    "outputs": {
+        "frames": "/kaggle/working/v3_2_7_conditioning_test/frames",
+        "contact_sheet": "/kaggle/working/v3_2_7_conditioning_test/preview_contact_sheet.png",
+        "gif": "/kaggle/working/v3_2_7_conditioning_test/v3_2_7_preview.gif",
+        "first_frame": "/kaggle/working/v3_2_7_conditioning_test/animation_first_frame.png"
+    }
+}
